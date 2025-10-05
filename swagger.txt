@@ -1,0 +1,777 @@
+openapi: 3.0.4
+info:
+  title: POS API
+  description: |
+    Software as a Service platform for catering and beauty businesses.
+  version: 1.0.0
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
+  schemas:
+    Business:
+      type: object
+      required:
+        - id
+        - name
+        - business_type
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        business_type:
+          type: string
+          enum: [catering, beauty]
+        address:
+          type: object
+          properties:
+            street:
+              type: string
+            city:
+              type: string
+            zip_code:
+              type: string
+        contact_info:
+          type: object
+          properties:
+            phone:
+              type: string
+            email:
+              type: string
+    
+    User:
+      type: object
+      required:
+        - id
+        - business_id
+        - role
+      properties:
+        id:
+          type: integer
+        business_id:
+          type: integer
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [owner, employee]
+    
+    Product:
+      type: object
+      required:
+        - id
+        - name
+        - price
+        - tax_rate_id
+        - status
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: float
+          minimum: 0
+        tax_rate_id:
+          type: integer
+    
+    TaxRate:
+      type: object
+      required:
+        - id
+        - name
+        - rate
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        rate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+    
+    ServiceCharge:
+      type: object
+      required:
+        - id
+        - name
+        - rate
+        - type
+        - is_active
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        rate:
+          type: number
+          format: float
+          minimum: 0
+    
+    Order:
+      type: object
+      required:
+        - id
+        - business_id
+        - employee_id
+        - items
+        - status
+      properties:
+        id:
+          type: integer
+        business_id:
+          type: integer
+        employee_id:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        status:
+          type: string
+          enum: [open, paid, cancelled, refunded]
+        subtotal:
+          type: number
+          format: float
+        tax_amount:
+          type: number
+          format: float
+        service_charge_amount:
+          type: number
+          format: float
+        total_amount:
+          type: number
+          format: float
+        payment_method:
+          type: string
+          enum: [cash, card]
+    
+    OrderItem:
+      type: object
+      required:
+        - product_id
+        - quantity
+      properties:
+        product_id:
+          type: integer
+        quantity:
+          type: integer
+          minimum: 1
+    
+    Appointment:
+      type: object
+      required:
+        - id
+        - business_id
+        - employee_id
+        - service_title
+        - appointment_time
+        - status
+      properties:
+        id:
+          type: integer
+        business_id:
+          type: integer
+        employee_id:
+          type: integer
+        service_title:
+          type: string
+          example: "Spa"
+        service_description:
+          type: string
+          example: "Massage and salt bath"
+        appointment_time:
+          type: string
+          format: date-time
+        duration_minutes:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [scheduled, completed, cancelled]
+
+paths:
+  /orders:
+    post:
+      summary: Create a new order
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/OrderItem'
+      responses:
+        '200':
+          description: Order created successfully
+        '400':
+          description: Invalid input
+    
+    get:
+      summary: Get orders
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, paid, cancelled, refunded]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+  
+  /orders/{orderId}:
+    get:
+      summary: Get order by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+    
+    put:
+      summary: Update an open order
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/OrderItem'
+      responses:
+        '200':
+          description: Order updated successfully
+        '400':
+          description: Cannot modify closed order
+        '404':
+          description: Order not found
+    
+    delete:
+      summary: Cancel an open order
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order cancelled successfully
+        '400':
+          description: Cannot cancel closed order
+        '404':
+          description: Order not found
+  
+  /orders/{orderId}/pay:
+    post:
+      summary: Process payment for an order
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payment_method
+              properties:
+                payment_method:
+                  type: string
+                  enum: [cash, card]
+      responses:
+        '200':
+          description: Payment processed successfully
+        '400':
+          description: Order already paid for
+  
+  /orders/{orderId}/refund:
+    post:
+      summary: Refund a paid order
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order refunded successfully
+        '400':
+          description: Cannot refund open or already refunded order
+  
+  /appointments:
+    post:
+      summary: Create a new appointment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - service_title
+                - appointment_time
+                - customer_info
+              properties:
+                service_title:
+                  type: string
+                service_description:
+                  type: string
+                appointment_time:
+                  type: string
+                  format: date-time
+                duration_minutes:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Appointment created successfully
+        '400':
+          description: Employee unable to perform service at selected time
+    
+    get:
+      summary: Get appointments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: employee_id
+          in: query
+          schema:
+            type: integer
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [scheduled, completed, cancelled]
+      responses:
+        '200':
+          description: List of appointments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  appointments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Appointment'
+  
+  /appointments/{appointmentId}:
+    put:
+      summary: Update an appointment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                employee_id:
+                  type: integer
+                service_title:
+                  type: string
+                service_description:
+                  type: string
+                appointment_time:
+                  type: string
+                  format: date-time
+                duration_minutes:
+                  type: integer
+      responses:
+        '200':
+          description: Appointment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+    
+    delete:
+      summary: Cancel an appointment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Appointment cancelled successfully
+        '400':
+          description: Service already performed
+  
+  /taxes:
+    post:
+      summary: Create a new tax rate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - rate
+              properties:
+                name:
+                  type: string
+                rate:
+                  type: number
+                  format: float
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Tax rate created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxRate'
+    
+    get:
+      summary: Get all tax rates
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of tax rates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  taxes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TaxRate'
+  
+  /taxes/{taxId}:
+    put:
+      summary: Update a tax rate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taxId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                rate:
+                  type: number
+                  format: float
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Tax rate updated successfully
+    
+    delete:
+      summary: Delete a tax rate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taxId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tax rate deleted successfully
+  
+  /products:
+    post:
+      summary: Create a new product
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - price
+                - tax_rate_id
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: number
+                  format: float
+                tax_rate_id:
+                  type: integer
+      responses:
+        '200':
+          description: Product created successfully
+    
+    get:
+      summary: Get all products
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+  
+  /products/{productId}:
+    put:
+      summary: Update a product
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: number
+                  format: float
+                tax_rate_id:
+                  type: integer
+      responses:
+        '200':
+          description: Product updated successfully
+    
+    delete:
+      summary: Delete a product
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Product deleted successfully
+  
+  /users:
+    post:
+      summary: Create a new user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - role
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [owner, employee]
+      responses:
+        '200':
+          description: User created successfully
+    
+    get:
+      summary: Get all users for the business
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+  
+  /users/{userId}:
+    put:
+      summary: Update a user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [owner, employee]
+      responses:
+        '200':
+          description: User updated successfully
+    
+    delete:
+      summary: Delete a user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User deleted successfully
+
+security:
+  - bearerAuth: []
