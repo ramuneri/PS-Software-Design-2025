@@ -2,7 +2,8 @@ openapi: 3.0.4
 info:
   title: POS API
   description: |
-    Software as a Service platform for catering and beauty businesses.
+    Software as a Service platform for catering and beauty businesses.  
+    All endpoints are secured with JWT bearer authentication. The business id and user/employee id are extracted from the JWT
   version: 1.0.0
 
 components:
@@ -47,21 +48,19 @@ components:
     User:
       type: object
       required:
-        - id
-        - business_id
-        - role
+        - name
       properties:
         id:
           type: integer
         business_id:
           type: integer
-        first_name:
-          type: string
-        last_name:
+        name:
           type: string
         email:
           type: string
           format: email
+        password:
+          type: string
         role:
           type: string
           enum: [owner, employee]
@@ -69,11 +68,9 @@ components:
     Product:
       type: object
       required:
-        - id
         - name
         - price
-        - tax_rate_id
-        - status
+        - tax_rate
       properties:
         id:
           type: integer
@@ -85,62 +82,26 @@ components:
           type: number
           format: float
           minimum: 0
-        tax_rate_id:
-          type: integer
-    
-    TaxRate:
-      type: object
-      required:
-        - id
-        - name
-        - rate
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        rate:
+        tax_rate:
           type: number
           format: float
+          example: 21
           minimum: 0
           maximum: 100
-    
-    ServiceCharge:
-      type: object
-      required:
-        - id
-        - name
-        - rate
-        - type
-        - is_active
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        description:
-          type: string
-        rate:
-          type: number
-          format: float
-          minimum: 0
     
     Order:
       type: object
       required:
-        - id
-        - business_id
         - employee_id
         - items
-        - status
       properties:
         id:
           type: integer
-        business_id:
-          type: integer
         employee_id:
           type: integer
+        customer:
+          type: string
+          description: Optional customer identifier (table no., full name etc.)
         items:
           type: array
           items:
@@ -179,31 +140,45 @@ components:
     Appointment:
       type: object
       required:
-        - id
-        - business_id
-        - employee_id
+        - service_provider_name
         - service_title
         - appointment_time
-        - status
+        - duration_minutes
+        - customer_info
       properties:
         id:
           type: integer
-        business_id:
-          type: integer
         employee_id:
           type: integer
+          description: Id of employee booking the appointment
+        service_provider_name:
+          type: string
+          description: Full name of employee performing the service
         service_title:
           type: string
           example: "Spa"
         service_description:
           type: string
           example: "Massage and salt bath"
+        booked_at:
+          type: string
+          format: date-time
         appointment_time:
           type: string
           format: date-time
         duration_minutes:
           type: integer
           minimum: 1
+        customer_info:
+          type: object
+          properties:
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+            phone_number:
+              type: string
         status:
           type: string
           enum: [scheduled, completed, cancelled]
@@ -225,6 +200,8 @@ paths:
                   type: array
                   items:
                     $ref: '#/components/schemas/OrderItem'
+                customer:
+                  type: string
       responses:
         '200':
           description: Order created successfully
@@ -307,6 +284,8 @@ paths:
                   type: array
                   items:
                     $ref: '#/components/schemas/OrderItem'
+                customer:
+                  type: string
       responses:
         '200':
           description: Order updated successfully
@@ -378,6 +357,74 @@ paths:
           description: Order refunded successfully
         '400':
           description: Cannot refund open or already refunded order
+          
+  /orders/{orderId}/receipt:
+    get:
+      summary: Get receipt of order
+      description: Retrieve a detailed receipt for a paid or refunded order, including itemized totals and tax breakdown.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order receipt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order_id:
+                    type: integer
+                    example: 123
+                  customer:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        product_id:
+                          type: integer
+                        name:
+                          type: string
+                        quantity:
+                          type: integer
+                          minimum: 1
+                        total_price:
+                          type: number
+                          format: float
+                          minimum: 0.01
+                  subtotal:
+                    type: number
+                    format: float
+                    description: Total amount before tax.
+                    example: 0.01
+                  tax_amount:
+                    type: number
+                    format: float
+                    description: Tax amount applied to the subtotal.
+                    minimum: 0.01
+                  total:
+                    type: number
+                    format: float
+                    description: Final total amount including tax.
+                    example: 0.02
+                  payment_method:
+                    type: string
+                    enum: [cash, card]
+                  date_time:
+                    type: string
+                    format: date-time
+        '400':
+          description: Order is still open
+        '404':
+          description: Order not found
+
   
   /appointments:
     post:
@@ -391,12 +438,17 @@ paths:
             schema:
               type: object
               required:
+                - service_provider_name
                 - service_title
                 - appointment_time
+                - duration_minutes
                 - customer_info
               properties:
+                service_provider_name:
+                  type: string
                 service_title:
                   type: string
+                  example: "Spa"
                 service_description:
                   type: string
                 appointment_time:
@@ -405,6 +457,16 @@ paths:
                 duration_minutes:
                   type: integer
                   minimum: 1
+                customer_info:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    email:
+                      type: string
+                      format: email
+                    phone_number:
+                      type: string
       responses:
         '200':
           description: Appointment created successfully
@@ -416,10 +478,14 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: employee_id
+        - name: service_provider_name
           in: query
           schema:
-            type: integer
+            type: string
+        - name: service_title
+          in: query
+          schema:
+            type: string
         - name: start_date
           in: query
           schema:
@@ -430,6 +496,10 @@ paths:
           schema:
             type: string
             format: date
+        - name: customer_name
+          in: query
+          schema:
+            type: string
         - name: status
           in: query
           schema:
@@ -449,6 +519,26 @@ paths:
                       $ref: '#/components/schemas/Appointment'
   
   /appointments/{appointmentId}:
+    get:
+      summary: Get appointment by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Appointment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '404':
+          description: Appointment not found
+          
     put:
       summary: Update an appointment
       security:
@@ -466,8 +556,8 @@ paths:
             schema:
               type: object
               properties:
-                employee_id:
-                  type: integer
+                service_provider_name:
+                  type: string
                 service_title:
                   type: string
                 service_description:
@@ -477,13 +567,19 @@ paths:
                   format: date-time
                 duration_minutes:
                   type: integer
+                customer_info:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    email:
+                      type: string
+                      format: email
+                    phone_number:
+                      type: string
       responses:
         '200':
           description: Appointment updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Appointment'
     
     delete:
       summary: Cancel an appointment
@@ -497,99 +593,9 @@ paths:
             type: integer
       responses:
         '200':
-          description: Appointment cancelled successfully
+          description: Appointment deleted succesfully
         '400':
           description: Service already performed
-  
-  /taxes:
-    post:
-      summary: Create a new tax rate
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - name
-                - rate
-              properties:
-                name:
-                  type: string
-                rate:
-                  type: number
-                  format: float
-                description:
-                  type: string
-      responses:
-        '200':
-          description: Tax rate created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TaxRate'
-    
-    get:
-      summary: Get all tax rates
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of tax rates
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  taxes:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/TaxRate'
-  
-  /taxes/{taxId}:
-    put:
-      summary: Update a tax rate
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: taxId
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                rate:
-                  type: number
-                  format: float
-                description:
-                  type: string
-      responses:
-        '200':
-          description: Tax rate updated successfully
-    
-    delete:
-      summary: Delete a tax rate
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: taxId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Tax rate deleted successfully
   
   /products:
     post:
@@ -605,7 +611,7 @@ paths:
               required:
                 - name
                 - price
-                - tax_rate_id
+                - tax_rate
               properties:
                 name:
                   type: string
@@ -614,8 +620,12 @@ paths:
                 price:
                   type: number
                   format: float
-                tax_rate_id:
-                  type: integer
+                  minimum: 0.01
+                tax_rate:
+                  type: number
+                  example: 21
+                  minimum: 0
+                  maximum: 100
       responses:
         '200':
           description: Product created successfully
@@ -638,6 +648,26 @@ paths:
                       $ref: '#/components/schemas/Product'
   
   /products/{productId}:
+    get:
+      summary: Get product by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+  
     put:
       summary: Update a product
       security:
@@ -662,8 +692,13 @@ paths:
                 price:
                   type: number
                   format: float
-                tax_rate_id:
-                  type: integer
+                  minimum: 0.01
+                tax_rate:
+                  type: number
+                  format: float
+                  example: 9
+                  minimum: 0
+                  maximum: 100
       responses:
         '200':
           description: Product updated successfully
@@ -684,6 +719,8 @@ paths:
   
   /users:
     post:
+      tags:
+        - Accessible only to owner user
       summary: Create a new user
       security:
         - bearerAuth: []
@@ -694,24 +731,25 @@ paths:
             schema:
               type: object
               required:
-                - role
+                - name
+                - email
+                - password
               properties:
-                first_name:
-                  type: string
-                last_name:
+                name:
                   type: string
                 email:
                   type: string
                   format: email
-                role:
+                password:
                   type: string
-                  enum: [owner, employee]
       responses:
         '200':
           description: User created successfully
     
     get:
-      summary: Get all users for the business
+      tags:
+        - Accessible only to owner user
+      summary: Get all users
       security:
         - bearerAuth: []
       responses:
@@ -729,6 +767,8 @@ paths:
   
   /users/{userId}:
     put:
+      tags:
+        - Accessible only to owner user
       summary: Update a user
       security:
         - bearerAuth: []
@@ -745,21 +785,15 @@ paths:
             schema:
               type: object
               properties:
-                first_name:
+                name:
                   type: string
-                last_name:
-                  type: string
-                email:
-                  type: string
-                  format: email
-                role:
-                  type: string
-                  enum: [owner, employee]
       responses:
         '200':
           description: User updated successfully
     
     delete:
+      tags:
+        - Accessible only to owner user
       summary: Delete a user
       security:
         - bearerAuth: []
@@ -772,6 +806,9 @@ paths:
       responses:
         '200':
           description: User deleted successfully
-
-security:
-  - bearerAuth: []
+  
+  
+  
+  
+  
+  
