@@ -14,37 +14,6 @@ components:
       bearerFormat: JWT
   
   schemas:
-    Business:
-      type: object
-      required:
-        - id
-        - name
-        - business_type
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        business_type:
-          type: string
-          enum: [catering, beauty]
-        address:
-          type: object
-          properties:
-            street:
-              type: string
-            city:
-              type: string
-            zip_code:
-              type: string
-        contact_info:
-          type: object
-          properties:
-            phone:
-              type: string
-            email:
-              type: string
-    
     User:
       type: object
       required:
@@ -118,24 +87,61 @@ components:
         service_charge_amount:
           type: number
           format: float
+        discount_amount:
+          type: number
+          format: float
         total_amount:
           type: number
           format: float
-        payment_method:
-          type: string
-          enum: [cash, card]
+        tip:
+          type: number
+          format: float
     
     OrderItem:
       type: object
       required:
+        - order_item_id
         - product_id
         - quantity
       properties:
+        order_item_id:
+          type: integer
         product_id:
           type: integer
+        variation_id:
+          type: integer
+        discount_amount:
+          type: number
+          format: float
         quantity:
           type: integer
           minimum: 1
+          
+    Discount:
+      type: object
+      required:
+        - name
+        - amount
+        - type
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        amount:
+          type: number
+          format: float
+        amount_type:
+          type: string
+          enum: [fixed, percentage]
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
     
     Appointment:
       type: object
@@ -195,11 +201,31 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - items
               properties:
                 items:
                   type: array
                   items:
-                    $ref: '#/components/schemas/OrderItem'
+                    type: object
+                    required:
+                      - order_item_id
+                      - product_id
+                      - quantity
+                    properties:
+                      order_item_id:
+                        type: integer
+                        example: 0
+                      product_id:
+                        type: integer
+                        example: 0
+                      variation_id:
+                        type: integer
+                        example: 0
+                      quantity:
+                        type: integer
+                        minimum: 1
+                        example: 1
                 customer:
                   type: string
       responses:
@@ -207,6 +233,7 @@ paths:
           description: Order created successfully
         '400':
           description: Invalid input
+
     
     get:
       summary: Get orders
@@ -279,11 +306,31 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - items
               properties:
                 items:
                   type: array
                   items:
-                    $ref: '#/components/schemas/OrderItem'
+                    type: object
+                    required:
+                      - order_item_id
+                      - product_id
+                      - quantity
+                    properties:
+                      order_item_id:
+                        type: integer
+                        example: 0
+                      product_id:
+                        type: integer
+                        example: 0
+                      variation_id:
+                        type: integer
+                        example: 0
+                      quantity:
+                        type: integer
+                        minimum: 1
+                        example: 1
                 customer:
                   type: string
       responses:
@@ -315,6 +362,12 @@ paths:
   /orders/{orderId}/pay:
     post:
       summary: Process payment for an order
+      description: |
+        Handles both full and split payments.
+        
+        If `split_type` is not provided or set to `none`, the entire order will be paid in full. `splits` array contains only one element.
+        
+        If `split_type` is `percentage` or `perItem`, one object per paying customer in `splits` array.
       security:
         - bearerAuth: []
       parameters:
@@ -329,17 +382,41 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - payment_method
               properties:
-                payment_method:
+                split_type:
                   type: string
-                  enum: [cash, card]
+                  enum: [none, percentage, perItem]
+                splits:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - payment_method
+                    properties:
+                      payment_method:
+                        type: string
+                        enum: [cash, card, giftCard]
+                      percentage:
+                        type: number
+                        format: float
+                        minimum: 1
+                        maximum: 99
+                        example: 50
+                      order_item_ids:
+                        type: array
+                        items:
+                          type: integer
+                          example: [0, 2, 3]
+                      tip:
+                        type: number
+                        format: float
       responses:
         '200':
           description: Payment processed successfully
         '400':
-          description: Order already paid for
+          description: Invalid input or order already fully paid
+        '404':
+          description: Order not found
   
   /orders/{orderId}/refund:
     post:
@@ -395,6 +472,9 @@ paths:
                         quantity:
                           type: integer
                           minimum: 1
+                        discount_amount:
+                          type: number
+                          format: float
                         total_price:
                           type: number
                           format: float
@@ -409,14 +489,20 @@ paths:
                     format: float
                     description: Tax amount applied to the subtotal.
                     minimum: 0.01
+                  service_charge_amount:
+                    type: number
+                    format: float
+                  discount_amount:
+                    type: number
+                    format: float
                   total:
                     type: number
                     format: float
                     description: Final total amount including tax.
                     example: 0.02
-                  payment_method:
-                    type: string
-                    enum: [cash, card]
+                  tip:
+                    type: number
+                    format: float
                   date_time:
                     type: string
                     format: date-time
@@ -716,7 +802,284 @@ paths:
       responses:
         '200':
           description: Product deleted successfully
+          
+  /products/{productId}/variations:
+    post:
+      summary: Create a product variation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - priceChange
+                - tax_rate
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                priceChange:
+                  type: number
+                  format: float
+                  minimum: 0
+      responses:
+        '200':
+          description: Product variation created successfully
   
+    get:
+      summary: Get all variations for a product
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of product variations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  variations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        product_id:
+                          type: integer
+                        name:
+                          type: string
+                        description:
+                          type: string
+                        priceChange:
+                          type: number
+                          format: float
+                          minimum: 0
+        '404':
+          description: Product not found
+  
+    put:
+      summary: Update a product variation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: variationId
+          in: query
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                priceChange:
+                  type: number
+                  format: float
+                  minimum: 0
+      responses:
+        '200':
+          description: Product variation updated successfully
+        '404':
+          description: Product variation not found
+  
+    delete:
+      summary: Delete a product variation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: variationId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Product variation deleted successfully
+        '404':
+          description: Product variation not found
+
+  /discounts:
+    post:
+      summary: Create a discount
+      description: |
+        Create a discount on the backend, which is applied to every product or order automatically.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - amount
+                - amount_type
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                amount:
+                  type: number
+                  format: float
+                  example: 20
+                amount_type:
+                  type: string
+                  enum: [fixed, percentage]
+                  example: "percentage"
+                start_time:
+                  type: string
+                  format: date-time
+                end_time:
+                  type: string
+                  format: date-time
+
+      responses:
+        '200':
+          description: Discount created successfully
+        '400':
+          description: Invalid input
+  
+    get:
+      summary: Get all discounts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: active
+          in: query
+          schema:
+            type: boolean
+          description: Filter only active discounts
+      responses:
+        '200':
+          description: List of discounts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  discounts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Discount'
+
+  /discounts/{discountId}:
+    get:
+      summary: Get discount by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: discountId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Discount details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Discount'
+        '404':
+          description: Discount not found
+  
+    put:
+      summary: Update a discount
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: discountId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - amount
+                - amount_type
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                amount:
+                  type: number
+                  format: float
+                  example: 2.99
+                amount_type:
+                  type: string
+                  enum: [fixed, percentage]
+                  example: "fixed"
+                start_time:
+                  type: string
+                  format: date-time
+                end_time:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Discount updated successfully
+        '404':
+          description: Discount not found
+  
+    delete:
+      summary: Delete a discount
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: discountId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Discount deleted successfully
+        '404':
+          description: Discount not found
+
   /users:
     post:
       tags:
