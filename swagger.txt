@@ -49,11 +49,11 @@ components:
           type: string
         price:
           type: number
-          format: float
+          format: decimal
           minimum: 0
         tax_rate:
           type: number
-          format: float
+          format: decimal
           example: 21
           minimum: 0
           maximum: 100
@@ -80,22 +80,22 @@ components:
           enum: [open, paid, cancelled, refunded]
         subtotal:
           type: number
-          format: float
+          format: decimal
         tax_amount:
           type: number
-          format: float
+          format: decimal
         service_charge_amount:
           type: number
-          format: float
+          format: decimal
         discount_amount:
           type: number
-          format: float
+          format: decimal
         total_amount:
           type: number
-          format: float
+          format: decimal
         tip:
           type: number
-          format: float
+          format: decimal
     
     OrderItem:
       type: object
@@ -112,7 +112,7 @@ components:
           type: integer
         discount_amount:
           type: number
-          format: float
+          format: decimal
         quantity:
           type: integer
           minimum: 1
@@ -132,7 +132,7 @@ components:
           type: string
         amount:
           type: number
-          format: float
+          format: decimal
         amount_type:
           type: string
           enum: [fixed, percentage]
@@ -398,7 +398,7 @@ paths:
                         enum: [cash, card, giftCard]
                       percentage:
                         type: number
-                        format: float
+                        format: decimal
                         minimum: 1
                         maximum: 99
                         example: 50
@@ -409,7 +409,7 @@ paths:
                           example: [0, 2, 3]
                       tip:
                         type: number
-                        format: float
+                        format: decimal
       responses:
         '200':
           description: Payment processed successfully
@@ -474,35 +474,35 @@ paths:
                           minimum: 1
                         discount_amount:
                           type: number
-                          format: float
+                          format: decimal
                         total_price:
                           type: number
-                          format: float
+                          format: decimal
                           minimum: 0.01
                   subtotal:
                     type: number
-                    format: float
+                    format: decimal
                     description: Total amount before tax.
                     example: 0.01
                   tax_amount:
                     type: number
-                    format: float
+                    format: decimal
                     description: Tax amount applied to the subtotal.
                     minimum: 0.01
                   service_charge_amount:
                     type: number
-                    format: float
+                    format: decimal
                   discount_amount:
                     type: number
-                    format: float
+                    format: decimal
                   total:
                     type: number
-                    format: float
+                    format: decimal
                     description: Final total amount including tax.
                     example: 0.02
                   tip:
                     type: number
-                    format: float
+                    format: decimal
                   date_time:
                     type: string
                     format: date-time
@@ -705,7 +705,7 @@ paths:
                   type: string
                 price:
                   type: number
-                  format: float
+                  format: decimal
                   minimum: 0.01
                 tax_rate:
                   type: number
@@ -777,11 +777,11 @@ paths:
                   type: string
                 price:
                   type: number
-                  format: float
+                  format: decimal
                   minimum: 0.01
                 tax_rate:
                   type: number
-                  format: float
+                  format: decimal
                   example: 9
                   minimum: 0
                   maximum: 100
@@ -831,7 +831,7 @@ paths:
                   type: string
                 priceChange:
                   type: number
-                  format: float
+                  format: decimal
                   minimum: 0
       responses:
         '200':
@@ -870,7 +870,7 @@ paths:
                           type: string
                         priceChange:
                           type: number
-                          format: float
+                          format: decimal
                           minimum: 0
         '404':
           description: Product not found
@@ -903,7 +903,7 @@ paths:
                   type: string
                 priceChange:
                   type: number
-                  format: float
+                  format: decimal
                   minimum: 0
       responses:
         '200':
@@ -956,7 +956,7 @@ paths:
                   type: string
                 amount:
                   type: number
-                  format: float
+                  format: decimal
                   example: 20
                 amount_type:
                   type: string
@@ -1046,7 +1046,7 @@ paths:
                   type: string
                 amount:
                   type: number
-                  format: float
+                  format: decimal
                   example: 2.99
                 amount_type:
                   type: string
