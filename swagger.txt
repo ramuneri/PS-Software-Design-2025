@@ -51,6 +51,9 @@ components:
           type: number
           format: decimal
           minimum: 0
+        discount_amount:
+          type: number
+          format: decimal
         tax_rate:
           type: number
           format: decimal
@@ -68,6 +71,7 @@ components:
           type: integer
         employee_id:
           type: integer
+          description: Id of employee that took the order
         customer:
           type: string
           description: Optional customer identifier (table no., full name etc.)
@@ -209,13 +213,9 @@ paths:
                   items:
                     type: object
                     required:
-                      - order_item_id
                       - product_id
                       - quantity
                     properties:
-                      order_item_id:
-                        type: integer
-                        example: 0
                       product_id:
                         type: integer
                         example: 0
@@ -314,13 +314,9 @@ paths:
                   items:
                     type: object
                     required:
-                      - order_item_id
                       - product_id
                       - quantity
                     properties:
-                      order_item_id:
-                        type: integer
-                        example: 0
                       product_id:
                         type: integer
                         example: 0
@@ -336,10 +332,10 @@ paths:
       responses:
         '200':
           description: Order updated successfully
-        '400':
-          description: Cannot modify closed order
         '404':
           description: Order not found
+        '409':
+          description: Cannot modify closed order
     
     delete:
       summary: Cancel an open order
@@ -354,10 +350,10 @@ paths:
       responses:
         '200':
           description: Order cancelled successfully
-        '400':
-          description: Cannot cancel closed order
         '404':
           description: Order not found
+        '409':
+          description: Cannot cancel closed order
   
   /orders/{orderId}/pay:
     post:
@@ -414,9 +410,11 @@ paths:
         '200':
           description: Payment processed successfully
         '400':
-          description: Invalid input or order already fully paid
+          description: Invalid input
         '404':
           description: Order not found
+        '409':
+          description: Order is already closed
   
   /orders/{orderId}/refund:
     post:
@@ -432,7 +430,9 @@ paths:
       responses:
         '200':
           description: Order refunded successfully
-        '400':
+        '404':
+          description: Order not found
+        '409':
           description: Cannot refund open or already refunded order
           
   /orders/{orderId}/receipt:
@@ -466,6 +466,8 @@ paths:
                       type: object
                       properties:
                         product_id:
+                          type: integer
+                        variation_id:
                           type: integer
                         name:
                           type: string
@@ -506,10 +508,10 @@ paths:
                   date_time:
                     type: string
                     format: date-time
-        '400':
-          description: Order is still open
         '404':
           description: Order not found
+        '409':
+          description: Order is still open
 
   
   /appointments:
@@ -666,6 +668,10 @@ paths:
       responses:
         '200':
           description: Appointment updated successfully
+        '400':
+          description: Invalid input
+        '409':
+          description: Appointment is already completed
     
     delete:
       summary: Cancel an appointment
@@ -680,8 +686,8 @@ paths:
       responses:
         '200':
           description: Appointment deleted succesfully
-        '400':
-          description: Service already performed
+        '409':
+          description: Appointment is already completed
   
   /products:
     post:
@@ -788,6 +794,10 @@ paths:
       responses:
         '200':
           description: Product updated successfully
+        '400':
+          description: Invalid input
+        '404':
+          description: Product not found
     
     delete:
       summary: Delete a product
@@ -802,6 +812,8 @@ paths:
       responses:
         '200':
           description: Product deleted successfully
+        '404':
+          description: Product not found
           
   /products/{productId}/variations:
     post:
@@ -836,6 +848,8 @@ paths:
       responses:
         '200':
           description: Product variation created successfully
+        '404':
+          description: Product not found
   
     get:
       summary: Get all variations for a product
@@ -908,6 +922,8 @@ paths:
       responses:
         '200':
           description: Product variation updated successfully
+        '400':
+          description: Invalid input
         '404':
           description: Product variation not found
   
@@ -1061,6 +1077,8 @@ paths:
       responses:
         '200':
           description: Discount updated successfully
+        '400':
+          description: Invalid input
         '404':
           description: Discount not found
   
@@ -1108,6 +1126,8 @@ paths:
       responses:
         '200':
           description: User created successfully
+        '400':
+          description: Invalid input
     
     get:
       tags:
@@ -1153,6 +1173,8 @@ paths:
       responses:
         '200':
           description: User updated successfully
+        '404':
+          description: User not found
     
     delete:
       tags:
@@ -1169,6 +1191,8 @@ paths:
       responses:
         '200':
           description: User deleted successfully
+        '404':
+          description: User not found
   
   
   
