@@ -14,6 +14,25 @@ components:
       bearerFormat: JWT
   
   schemas:
+    Business:
+      type: object
+      required:
+        - name
+        - contact_email
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description: 
+          type: string
+        address:
+          type: string
+        contact_email:
+          type: string
+        phone_number:
+          type: string 
+    
     User:
       type: object
       required:
@@ -146,6 +165,56 @@ components:
         end_time:
           type: string
           format: date-time
+
+    Tax:
+      type: object
+      required:
+        - business_id
+        - name
+        - rate 
+        - applies_to
+      properties:
+        id: 
+          type: integer
+        business_id:
+          type: integer
+        name:
+          type: string
+        rate:
+          type: number
+          format: decimal
+        applies_to:
+          type: string
+        effective_from:
+          type: string
+          format: date-time
+        effective_to:
+          type: string
+          format: date-time
+
+    Service:
+      type: object
+      required:
+        - business_id
+        - name
+        - price
+      properties:
+        id:
+          type: integer
+        business_id:
+          type: integer
+        name: 
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: decimal
+        duration_minutes:
+          type: integer
+        tax_rate:
+          type: number
+          format: decimal
     
     Appointment:
       type: object
