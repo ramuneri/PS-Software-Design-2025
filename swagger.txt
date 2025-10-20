@@ -19,6 +19,7 @@ components:
       required:
         - name
         - contact_email
+        - owner_id
       properties:
         id:
           type: integer
@@ -31,7 +32,9 @@ components:
         contact_email:
           type: string
         phone_number:
-          type: string 
+          type: string
+        owner_id:
+          type: integer
     
     User:
       type: object
@@ -198,6 +201,7 @@ components:
         - business_id
         - name
         - price
+        - employee_id
       properties:
         id:
           type: integer
@@ -215,6 +219,8 @@ components:
         tax_rate:
           type: number
           format: decimal
+        employee_id:
+          type: integer
     
     Appointment:
       type: object
@@ -1262,4 +1268,369 @@ paths:
           description: User deleted successfully
         '404':
           description: User not found
+
+  /services:
+    post:
+      summary: Create a new service
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - price
+                - employee_id
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: number
+                  format: decimal
+                  minimum: 0.01
+                duration_minutes:
+                  type: integer
+                tax_rate:
+                  type: number
+                  format: decimal
+                  example: 21
+                  minimum: 0
+                  maximum: 100
+                employee_id:
+                  type: integer
+      responses:
+        '200':
+          description: Service created successfully
+    
+    get:
+      summary: Get all services
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of services
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  services:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Service'
   
+  /services/{serviceId}:
+    get:
+      summary: Get service by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Service details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+        '404':
+          description: Service not found
+  
+    put:
+      summary: Update a service
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: number
+                  format: decimal
+                  minimum: 0.01
+                duration_minutes:
+                  type: integer
+                tax_rate:
+                  type: number
+                  format: decimal
+                  example: 9
+                  minimum: 0
+                  maximum: 100
+                employee_id:
+                  type: integer
+      responses:
+        '200':
+          description: Service updated successfully
+        '400':
+          description: Invalid input
+        '404':
+          description: Service not found
+    
+    delete:
+      summary: Delete a service
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Service deleted successfully
+        '404':
+          description: Service not found
+          
+  /taxes:
+    post:
+      summary: Create a tax rate
+      description: |
+        Create a tax rate on the backend, which can be applied to products or services automatically.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - rate
+                - applies_to
+              properties:
+                name:
+                  type: string
+                rate:
+                  type: number
+                  format: decimal
+                  example: 21
+                  minimum: 0
+                  maximum: 100
+                applies_to:
+                  type: string
+                effective_from:
+                  type: string
+                  format: date-time
+                effective_to:
+                  type: string
+                  format: date-time
+
+      responses:
+        '200':
+          description: Tax rate created successfully
+        '400':
+          description: Invalid input
+  
+    get:
+      summary: Get all tax rates
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: active
+          in: query
+          schema:
+            type: boolean
+          description: Filter only active taxes
+      responses:
+        '200':
+          description: List of tax rates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  taxes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tax'
+
+  /taxes/{taxId}:
+    get:
+      summary: Get tax by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taxId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tax details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tax'
+        '404':
+          description: Tax rate not found
+
+    put:
+      summary: Update a tax rate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taxId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - rate
+                - applies_to
+              properties:
+                name:
+                  type: string
+                rate:
+                  type: number
+                  format: decimal
+                  example: 9
+                  minimum: 0
+                  maximum: 100
+                applies_to:
+                  type: string
+                effective_from:
+                  type: string
+                  format: date-time
+                effective_to:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Tax rate updated successfully
+        '400':
+          description: Invalid input
+        '404':
+          description: Tax rate not found
+  
+    delete:
+      summary: Delete a tax rate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taxId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tax rate deleted successfully
+        '404':
+          description: Tax rate not found
+  
+  
+  /businesses:
+    post:
+      summary: Create a new business
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - contact_email
+                - owner_id
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                address:
+                  type: string
+                contact_email:
+                  type: string
+                  format: email
+                phone_number:
+                  type: string
+                owner_id:
+                  type: integer
+      responses:
+        '200':
+          description: Business created successfully
+        '400':
+          description: Invalid input
+
+  /business:
+    get:
+      summary: Get current business
+      description: Returns the business associated with the authenticated user's JWT.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Business details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Business'
+        '404':
+          description: Business not found
+
+    put:
+      summary: Update current business
+      description: Updates the business associated with the authenticated user's JWT.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                address:
+                  type: string
+                contact_email:
+                  type: string
+                  format: email
+                phone_number:
+                  type: string
+                owner_id:
+                  type: integer
+      responses:
+        '200':
+          description: Business updated successfully
+        '400':
+          description: Invalid input
+        '404':
+          description: Business not found
