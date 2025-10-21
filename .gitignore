@@ -1,0 +1,47 @@
+# macOS system files
+.DS_Store
+
+# Node / Frontend
+/frontend/node_modules/
+/frontend/build/
+/frontend/.react-router/
+
+# npm / pnpm / yarn lockfiles (optional to ignore)
+/frontend/package-lock.json
+/frontend/yarn.lock
+/frontend/pnpm-lock.yaml
+
+# Environment files
+.env
+/frontend/.env
+
+# Vite / React / TypeScript
+/frontend/dist/
+/frontend/.cache/
+
+# .NET / Backend
+/backend/bin/
+/backend/obj/
+/backend/*.user
+/backend/*.suo
+/backend/*.sln.docstates
+/backend/appsettings*.json   # optionally ignore dev-specific configs
+/backend/.vs/                 # Visual Studio workspace
+/backend/.idea/               # if using IntelliJ Rider/IDEA
+
+# Docker
+frontend/.dockerignore
+backend/.dockerignore
+frontend/Dockerfile
+backend/Dockerfile
+/backend/docker-compose.yml
+
+# IDEs
+.idea/
+*.code-workspace
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
