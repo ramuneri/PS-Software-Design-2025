@@ -2,7 +2,7 @@ import {
   isRouteErrorResponse,
   Links,
   Meta,
-  Outlet,
+  Outlet, redirect,
   Scripts,
   ScrollRestoration,
 } from "react-router";

@@ -1,7 +1,7 @@
 // import generated types
 import type { Route } from "./+types/example";
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function clientLoader({ params }: Route.LoaderArgs) {
     return { exampleKey: "Example Value" };
 }
 
