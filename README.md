@@ -30,7 +30,7 @@ This project is built with **ASP.NET Core (C#)** for the backend and **Vite + Ty
 }
 ```
 2. Apply migrations and seed data:
-```json
+```bash
 cd backend
 dotnet ef database update
 dotnet run
@@ -40,7 +40,7 @@ The backend will automatically create a test user:
 - Password: test123
 
 #### 3. Backend Setup
-```json
+```bash
 cd backend
 dotnet restore
 dotnet run
@@ -51,7 +51,7 @@ Swagger is available at: http://localhost:5141/swagger
 
 #### 4. Frontend Setup
 Run the frontend:
-```json
+```bash
 cd frontend
 npm install
 npm run dev
