@@ -2,13 +2,15 @@ import {
   isRouteErrorResponse,
   Links,
   Meta,
-  Outlet, redirect,
+  Outlet,
   Scripts,
   ScrollRestoration,
 } from "react-router";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import Header from "~/header";
+import { useEffect, useState } from "react";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -42,7 +44,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  const [user, setUser] = useState<{ name: string } | null>(() => {
+    const userJson = localStorage.getItem("user");
+    return userJson ? JSON.parse(userJson) : null;
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      const userJson = localStorage.getItem("user");
+      setUser(userJson ? JSON.parse(userJson) : null);
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  return (
+      <>
+        {user && <Header userName={user.name} setUser={setUser} />}
+        <Outlet context={{ setUser }} />
+      </>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

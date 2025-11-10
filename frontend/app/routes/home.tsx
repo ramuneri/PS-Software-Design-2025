@@ -6,6 +6,7 @@ export function meta() {
 }
 
 export default function Home() {
+  const [user, setUser] = useState<{ name: string } | null>({ name: "Manager" });
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
   const toggleSection = (section: string) => {
@@ -14,16 +15,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-200 flex flex-col">
-      {/* Header */}
-      <header className="bg-gray-300 py-4 px-6 flex justify-between items-center">
-        <h1 className="text-black text-base font-medium">OMS</h1>
-        <div className="flex items-center space-x-2">
-          <span className="text-black text-sm">Hi, Manager!</span>
-          <div className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-black font-semibold">
-            M
-          </div>
-        </div>
-      </header>
 
       {/* Main layout */}
       <div className="flex flex-1 p-6 space-x-6">

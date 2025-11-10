@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { useOutletContext } from "react-router";
 
 export default function Login() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const navigate = useNavigate();
+    const [email, setEmail] = useState("")
+    const [password, setPassword] = useState("")
+    const navigate = useNavigate()
+    const { setUser } = useOutletContext<{ setUser: React.Dispatch<React.SetStateAction<{ name: string } | null>> }>()
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -13,11 +15,14 @@ export default function Login() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
+            credentials: "include"
         });
 
         if (response.ok) {
             const result = await response.json();
             localStorage.setItem("access-token", result.accessToken);
+            localStorage.setItem("user", JSON.stringify(result.user));
+            setUser(result.user)
             navigate("/", { replace: true });
         }
     };
