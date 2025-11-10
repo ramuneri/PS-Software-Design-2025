@@ -1,3 +1,3 @@
 namespace backend.Dtos;
 
-public record RefreshTokenDto(string AccessToken, int ExpiresIn, string TokenType);
+public record RefreshTokenDto(string AccessToken, string RefreshToken, int ExpiresIn, string TokenType);

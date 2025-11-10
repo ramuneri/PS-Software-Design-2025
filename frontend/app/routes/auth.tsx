@@ -5,9 +5,6 @@ export default function Auth() {
     const location = useLocation();
     
     if (localStorage.getItem("access-token")) {
-        // check with backend if valid @/me
-        // if not, exchange refresh token
-        
         return <Outlet />
     } else {
         if (location.pathname !== "/")

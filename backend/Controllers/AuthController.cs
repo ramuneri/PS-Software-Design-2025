@@ -1,18 +1,20 @@
 using System.Globalization;
+using System.Security.Claims;
 using System.Text.RegularExpressions;
 using backend.Dtos;
 using backend.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace backend.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class AuthController(IAuthService authService) : ControllerBase
+public class AuthController(IAuthService authService, IConfiguration config) : ControllerBase
 {
     public record LoginRequest(string Email, string Password);
-    public record RefreshRequest(string RefreshToken);
     public record LogoutRequest(bool AllSessions = false);
     
     [HttpPost("login")]
@@ -25,20 +27,70 @@ public class AuthController(IAuthService authService) : ControllerBase
 
         if (result == null)
             return Unauthorized(new { message = "Invalid credentials" });
+        
+        Response.Cookies.Append("refreshToken", result.RefreshToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTime.UtcNow.AddDays(int.Parse(config["Jwt:RefreshTokenExpiryDays"]!))
+        });
 
         return Ok(result);
     }
     
     [HttpPost("refresh")]
-    public async Task<ActionResult<RefreshTokenDto>> RefreshToken([FromBody] RefreshRequest request)
+    public async Task<ActionResult<RefreshTokenDto>> RefreshToken()
     {
-        throw new NotImplementedException();
+        if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
+            return Unauthorized(new { message = "No refresh token" });
+        
+        var result = await authService.RefreshToken(refreshToken);
+        if (result == null)
+            return Unauthorized(new { message = "Invalid or expired refresh token" });
+        
+        Response.Cookies.Append("refreshToken", result.RefreshToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTime.UtcNow.AddDays(7)
+        });
+
+        return Ok(result);
     }
     
     [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] LogoutRequest request)
     {
-        throw new NotImplementedException();
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) 
+                     ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+        if (userId == null)
+        {
+            Response.Cookies.Delete("refreshToken", new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Path = "/"
+            });
+            return NoContent();
+        }
+
+        Request.Cookies.TryGetValue("refreshToken", out var refreshToken);
+    
+        await authService.Logout(userId, request.AllSessions ? null : refreshToken, request.AllSessions);
+
+        Response.Cookies.Delete("refreshToken", new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Path = "/"
+        });
+
+        return NoContent();
     }
     
     private static bool IsValidEmail(string email)
