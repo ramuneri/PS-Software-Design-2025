@@ -29,12 +29,12 @@ export default function Login() {
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gray-200">
-            {/* Top banner */}
+            
             <div className="w-11/12 max-w-5xl bg-gray-300 rounded-md py-4 text-center mb-4">
                 <h1 className="text-black text-sm font-medium">Please login</h1>
             </div>
 
-            {/* Login box */}
+            
             <div className="w-11/12 max-w-5xl bg-gray-300 rounded-md flex flex-col items-center justify-center py-16">
                 <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-6 text-center">
                     <div>
