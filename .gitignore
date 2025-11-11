@@ -39,6 +39,9 @@ backend/Dockerfile
 # IDEs
 .idea/
 *.code-workspace
+.vs/
+*.vsdx
+slnx.sqlite
 
 # Logs
 *.log
