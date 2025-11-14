@@ -2,7 +2,7 @@ namespace backend.Dtos;
 
 public record UserDto(
     string Id,
-    string MerchantId,
+    int? MerchantId,
     string Email,
     string Name,
     string Surname,
@@ -13,4 +13,4 @@ public record UserDto(
     DateTime LastLoginAt,
     DateTime CreatedAt,
     DateTime UpdatedAt
-    );
+);
