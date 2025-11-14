@@ -40,7 +40,9 @@ public class AuthService : IAuthService
         {
             Token = refreshToken,
             UserId = user.Id,
-            ExpiresAt = DateTime.UtcNow.AddDays(int.Parse(_config["Jwt:RefreshTokenExpiryDays"]!))
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(int.Parse(_config["Jwt:RefreshTokenExpiryDays"]!)),
+            IsRevoked = false
         };
 
         _context.RefreshTokens.Add(refreshTokenEntity);
@@ -53,16 +55,16 @@ public class AuthService : IAuthService
             TokenType: "Bearer",
             User: new UserDto(
                 Id: user.Id,
-                MerchantId: "placeholder",
+                MerchantId: user.MerchantId,
                 Email: user.Email ?? "",
-                Name: "Vardenis",
-                Surname: "Pavardenis",
+                Name: user.Name ?? "",
+                Surname: user.Surname ?? "",
                 PhoneNumber: user.PhoneNumber ?? "",
-                Role: "Employee",
-                IsSuperAdmin: false,
+                Role: user.Role ?? "Employee",
+                IsSuperAdmin: user.IsSuperAdmin,
                 IsActive: true,
-                LastLoginAt: DateTime.UtcNow,
-                CreatedAt: DateTime.UtcNow,
+                LastLoginAt: user.LastLoginAt,
+                CreatedAt: user.CreatedAt,
                 UpdatedAt: DateTime.UtcNow
             )
         );
@@ -87,7 +89,9 @@ public class AuthService : IAuthService
         {
             Token = newRefreshToken,
             UserId = user.Id,
-            ExpiresAt = DateTime.UtcNow.AddDays(int.Parse(_config["Jwt:RefreshTokenExpiryDays"] ?? "7"))
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(int.Parse(_config["Jwt:RefreshTokenExpiryDays"] ?? "7")),
+            IsRevoked = false
         };
 
         _context.RefreshTokens.Add(newRefreshTokenEntity);

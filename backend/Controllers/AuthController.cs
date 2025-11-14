@@ -54,7 +54,7 @@ public class AuthController(IAuthService authService, IConfiguration config) : C
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Strict,
-            Expires = DateTime.UtcNow.AddDays(7)
+            Expires = DateTime.UtcNow.AddDays(int.Parse(config["Jwt:RefreshTokenExpiryDays"]!))
         });
 
         return Ok(result);
