@@ -55,7 +55,7 @@ public class AuthService : IAuthService
             TokenType: "Bearer",
             User: new UserDto(
                 Id: user.Id,
-                MerchantId: user.MerchantId?.ToString() ?? "",
+                MerchantId: user.MerchantId,
                 Email: user.Email ?? "",
                 Name: user.Name ?? "",
                 Surname: user.Surname ?? "",
