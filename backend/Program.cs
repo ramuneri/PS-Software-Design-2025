@@ -34,6 +34,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<DbSeeder>();
 
 builder.Services.AddCors(options =>
 {
@@ -75,26 +76,13 @@ builder.Services.AddAuthentication(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+
 if (app.Environment.IsDevelopment())
 {
-    // Add a temporary test user
     using var scope = app.Services.CreateScope();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+    var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
+    await seeder.SeedAsync();
 
-    var testEmail = "test@temp.com";
-    var testPassword = "test123";
-
-    if (await userManager.FindByEmailAsync(testEmail) == null)
-    {
-        var user = new User
-        {
-            UserName = testEmail,
-            Email = testEmail
-        };
-
-        await userManager.CreateAsync(user, testPassword);
-    }
-    
     app.UseSwagger();
     app.UseSwaggerUI();
 }
