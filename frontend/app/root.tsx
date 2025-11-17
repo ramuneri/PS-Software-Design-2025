@@ -44,7 +44,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const [user, setUser] = useState<{ name: string } | null>(() => {
+    const [user, setUser] = useState<{ name?: string; email: string } | null>(() => {
     const userJson = localStorage.getItem("user");
     return userJson ? JSON.parse(userJson) : null;
   });
@@ -60,7 +60,7 @@ export default function App() {
 
   return (
       <>
-        {user && <Header userName={user.name} setUser={setUser} />}
+        {user && <Header userName={user.name} email={user.email} setUser={setUser} />}
         <Outlet context={{ setUser }} />
       </>
   );
