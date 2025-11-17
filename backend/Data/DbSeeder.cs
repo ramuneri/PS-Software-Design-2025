@@ -40,39 +40,6 @@ namespace backend.Data
             _logger.LogInformation("Database seeding completed.");
         }
 
-
-        private async Task SeedTestUserAsync()
-        {
-            const string testEmail = "test@temp.com";
-            const string testPassword = "test123";
-
-            var existing = await _userManager.FindByEmailAsync(testEmail);
-            if (existing != null)
-            {
-                _logger.LogInformation("Test user already exists, skipping.");
-                return;
-            }
-
-            var user = new User
-            {
-                UserName = testEmail,
-                Email = testEmail
-                // add other fields if your User class requires them
-            };
-
-            var result = await _userManager.CreateAsync(user, testPassword);
-
-            if (result.Succeeded)
-            {
-                _logger.LogInformation("Seeded test user {Email}", testEmail);
-            }
-            else
-            {
-                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                _logger.LogError("Failed to create test user: {Errors}", errors);
-            }
-        }
-
         private async Task<Merchant> SeedMerchantAsync()
         {
             var merchant = await _db.Merchants.FirstOrDefaultAsync(m => m.Name == "Test Merchant");
