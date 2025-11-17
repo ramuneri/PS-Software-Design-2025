@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router";
 
 interface HeaderProps {
-    userName: string;
-    setUser: React.Dispatch<React.SetStateAction<{ name: string } | null>>;
+    userName?: string;
+    email: string;
+    setUser: React.Dispatch<React.SetStateAction<{ name?: string; email: string } | null>>;
 }
 
-export default function Header({ userName, setUser }: HeaderProps) {
+export default function Header({ userName, email, setUser }: HeaderProps) {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const navigate = useNavigate();
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -44,6 +45,9 @@ export default function Header({ userName, setUser }: HeaderProps) {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    const displayName = userName?.trim() || email;
+    const avatarLetter = displayName?.[0]?.toUpperCase() || "?";
+
     return (
         <header className="bg-gray-300 py-3 px-6 flex justify-between items-center">
             {/* Left side - Logo */}
@@ -53,7 +57,7 @@ export default function Header({ userName, setUser }: HeaderProps) {
 
             {/* Right side - User info */}
             <div className="flex items-center space-x-2">
-                <span className="text-black text-sm">Hi, {userName}!</span>
+                <span className="text-black text-sm">Hi, {displayName}!</span>
                 <div className="relative" ref={dropdownRef}>
                     <button
                         onClick={(e) => {
@@ -62,7 +66,7 @@ export default function Header({ userName, setUser }: HeaderProps) {
                         }}
                         className="w-8 h-8 rounded-full bg-gray-400 text-black font-semibold flex items-center justify-center cursor-pointer hover:bg-gray-500"
                     >
-                        {userName[0].toUpperCase()}
+                        {avatarLetter}
                     </button>
 
                     {dropdownOpen && (

@@ -6,7 +6,7 @@ export default function Login() {
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const navigate = useNavigate()
-    const { setUser } = useOutletContext<{ setUser: React.Dispatch<React.SetStateAction<{ name: string } | null>> }>()
+    const { setUser } = useOutletContext<{ setUser: React.Dispatch<React.SetStateAction<{ name?: string; email: string } | null>> }>();
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
