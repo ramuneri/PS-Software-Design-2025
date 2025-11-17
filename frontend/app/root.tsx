@@ -9,7 +9,7 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
-import Header from "~/header";
+import Header from "~/components/header";
 import { useEffect, useState } from "react";
 
 export const links: Route.LinksFunction = () => [

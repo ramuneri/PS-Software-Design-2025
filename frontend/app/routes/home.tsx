@@ -1,12 +1,41 @@
-import type { Route } from "./+types/home";
-import {Link} from "react-router";
+import { useState } from "react";
+import Sidebar from "../components/homeSidebar";
 
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "OMS" },
-  ];
+export function meta() {
+  return [{ title: "OMS" }];
 }
 
 export default function Home() {
-  return <Link to={"/example"}>Go to /example</Link>
+  const [user, setUser] = useState<{ name: string } | null>({ name: "Manager" });
+
+  return (
+  <div className="h-[calc(100vh-60px)] bg-gray-200 flex flex-col overflow-hidden">
+
+      <div className="flex flex-1 p-6 space-x-6">
+        
+        <Sidebar />
+
+        {/* Content area on the right */}
+        <main className="flex-1 bg-gray-300 rounded-md p-6">
+          <h2 className="text-black font-medium mb-4">Looking for something?</h2>
+
+          {/* Search field */}
+          <div className="flex mb-8">
+            <input
+              type="text"
+              placeholder="Search..."
+              className="grow p-2 border border-black bg-white text-black rounded-l-md focus:outline-none"
+            />
+            <button className="bg-gray-400 px-4 text-black rounded-r-md hover:bg-gray-500">
+              Search
+            </button>
+          </div>
+
+          <p className="text-center text-black mt-10 text-sm">
+            Try searching something!
+          </p>
+        </main>
+      </div>
+    </div>
+  );
 }

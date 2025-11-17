@@ -17,7 +17,7 @@ export default function Login() {
             body: JSON.stringify({ email, password }),
             credentials: "include"
         });
-        
+
         if (response.ok) {
             const result = await response.json();
             localStorage.setItem("access-token", result.accessToken);
@@ -28,37 +28,48 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-                <h1 className="text-2xl font-bold text-center mb-6">OMS Login</h1>
-                <form className="space-y-4" onSubmit={handleSubmit}>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-200">
+            
+            <div className="w-11/12 max-w-5xl bg-gray-300 rounded-md py-4 text-center mb-4">
+                <h1 className="text-black text-sm font-medium">Please login</h1>
+            </div>
+
+            
+            <div className="w-11/12 max-w-5xl bg-gray-300 rounded-md flex flex-col items-center justify-center py-16">
+                <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-6 text-center">
                     <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                        <label
+                            htmlFor="email"
+                            className="block text-xs font-medium text-black text-left"
+                        >
                             Email
                         </label>
                         <input
                             type="email"
                             id="email"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full border border-black bg-white text-black px-2 py-2 focus:outline-none"
                             onChange={(e) => setEmail(e.target.value)}
                         />
                     </div>
 
                     <div>
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                        <label
+                            htmlFor="password"
+                            className="block text-xs font-medium text-black text-left"
+                        >
                             Password
                         </label>
                         <input
                             type="password"
                             id="password"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full border border-black bg-white text-black px-2 py-2 focus:outline-none"
                             onChange={(e) => setPassword(e.target.value)}
                         />
                     </div>
 
                     <button
                         type="submit"
-                        className="w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+                        className="w-48 bg-gray-400 text-black font-medium py-2 rounded-md hover:bg-gray-500"
                     >
                         Login
                     </button>
