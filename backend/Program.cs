@@ -79,9 +79,11 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    using var scope = app.Services.CreateScope();
-    var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
-    await seeder.SeedAsync();
+    using (var scope = app.Services.CreateScope())
+    {
+        var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
+        await seeder.SeedAsync();
+    }
 
     app.UseSwagger();
     app.UseSwaggerUI();
