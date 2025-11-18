@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Sidebar from "../components/homeSidebar";
+import { Link } from "react-router-dom";
 
 export function meta() {
   return [{ title: "OMS" }];
@@ -9,10 +10,9 @@ export default function Home() {
   const [user, setUser] = useState<{ name: string } | null>({ name: "Manager" });
 
   return (
-  <div className="h-[calc(100vh-60px)] bg-gray-200 flex flex-col overflow-hidden">
-
+    <div className="h-[calc(100vh-60px)] bg-gray-200 flex flex-col overflow-hidden">
       <div className="flex flex-1 p-6 space-x-6">
-        
+
         <Sidebar />
 
         {/* Content area on the right */}
@@ -34,6 +34,16 @@ export default function Home() {
           <p className="text-center text-black mt-10 text-sm">
             Try searching something!
           </p>
+
+          <div className="mt-10 text-center">
+            <Link
+              to="/debug"
+              className="inline-block bg-gray-400 text-black px-4 py-2 rounded hover:bg-gray-500 transition-colors"
+            >
+              Go to Debug Page
+            </Link>
+          </div>
+
         </main>
       </div>
     </div>
