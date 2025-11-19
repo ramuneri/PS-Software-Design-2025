@@ -59,6 +59,15 @@ npm run dev
 The app runs at http://localhost:5173
  by default.
 
+#### 5. Debug
+- 1 Merchant (Test Merchant)
+- 1 Employee user linked to that Merchant (test@temp.com/ test123)
+- 1 Product (Test Product)
+- 1 Service (Test Service)
+- Each item is only inserted if it does not already exist, so running the seeder multiple times is safe.
+- /debug is temporary and will be removed once real pages (Product List, Service List, Employee List) are implemented.
+- No production impact — this only runs in the dev environment.
+
 ---
 
 ## Access to project-related documents:

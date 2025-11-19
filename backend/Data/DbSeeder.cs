@@ -27,50 +27,117 @@ namespace backend.Data
         {
             _logger.LogInformation("Starting database seeding...");
 
-            // Apply pending migrations (creates DB if missing)
             await _db.Database.MigrateAsync();
 
-            await SeedTestUserAsync();
+            var merchant = await SeedMerchantAsync();
 
-            // TODO: Later, when Merchant/Product/Service entities exist,
-            // add seeding methods here:
-            // await SeedMerchantAsync();
-            // await SeedProductAsync();
-            // await SeedServiceAsync();
+            var employee = await SeedEmployeeUserAsync(merchant);
+
+            await SeedProductAsync(merchant);
+
+            await SeedServiceAsync(merchant);
 
             _logger.LogInformation("Database seeding completed.");
         }
 
-        private async Task SeedTestUserAsync()
+        private async Task<Merchant> SeedMerchantAsync()
         {
-            const string testEmail = "test@temp.com";
-            const string testPassword = "test123";
+            var merchant = await _db.Merchants.FirstOrDefaultAsync(m => m.Name == "Test Merchant");
 
-            var existing = await _userManager.FindByEmailAsync(testEmail);
-            if (existing != null)
+            if (merchant != null)
+                return merchant;
+
+            merchant = new Merchant
             {
-                _logger.LogInformation("Test user already exists, skipping.");
-                return;
-            }
+                Name = "Test Merchant",
+                Country = "LT",
+                City = "Vilnius",
+                Address = "Test Street 123",
+                Email = "merchant@test.com"
+            };
+
+            _db.Merchants.Add(merchant);
+            await _db.SaveChangesAsync();
+
+            _logger.LogInformation("Seeded default Merchant");
+
+            return merchant;
+        }
+
+        private async Task<User> SeedEmployeeUserAsync(Merchant merchant)
+        {
+            const string email = "test@temp.com";
+            const string password = "test123";
+
+            var existing = await _userManager.FindByEmailAsync(email);
+            if (existing != null)
+                return existing;
 
             var user = new User
             {
-                UserName = testEmail,
-                Email = testEmail
-                // add other fields if your User class requires them
+                UserName = email,
+                Email = email,
+                MerchantId = merchant.MerchantId,
+                Role = "Employee",
+                CreatedAt = DateTime.UtcNow,
+                LastLoginAt = DateTime.UtcNow
             };
 
-            var result = await _userManager.CreateAsync(user, testPassword);
+            var result = await _userManager.CreateAsync(user, password);
 
-            if (result.Succeeded)
+            if (!result.Succeeded)
             {
-                _logger.LogInformation("Seeded test user {Email}", testEmail);
+                var errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
+                _logger.LogError("Failed to seed employee user: {Error}", errorMsg);
             }
             else
             {
-                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                _logger.LogError("Failed to create test user: {Errors}", errors);
+                _logger.LogInformation("Seeded Employee user {Email}", email);
             }
+
+            return user;
+        }
+
+
+        private async Task SeedProductAsync(Merchant merchant)
+        {
+            if (await _db.Products.AnyAsync(p => p.Name == "Test Product"))
+                return;
+
+            var product = new Product
+            {
+                MerchantId = merchant.MerchantId,
+                Name = "Test Product",
+                Price = 9.99m,
+                Category = "General",
+                IsActive = true
+            };
+
+            _db.Products.Add(product);
+            await _db.SaveChangesAsync();
+
+            _logger.LogInformation("Seeded test Product");
+        }
+
+
+        private async Task SeedServiceAsync(Merchant merchant)
+        {
+            if (await _db.Services.AnyAsync(s => s.Name == "Test Service"))
+                return;
+
+            var service = new Service
+            {
+                MerchantId = merchant.MerchantId,
+                Name = "Test Service",
+                DefaultPrice = 19.99m,
+                DurationMinutes = 60,
+                IsActive = true
+            };
+
+            _db.Services.Add(service);
+            await _db.SaveChangesAsync();
+
+            _logger.LogInformation("Seeded test Service");
         }
     }
 }
