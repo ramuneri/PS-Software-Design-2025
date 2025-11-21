@@ -130,5 +130,31 @@ public class ProductsController : ControllerBase
 
         return NoContent();
     }
+
+
+    [HttpGet("search")]
+    public async Task<ActionResult<IEnumerable<ProductDto>>> SearchProducts([FromQuery] string q)
+    {
+        if (string.IsNullOrWhiteSpace(q))
+            return Ok(new List<ProductDto>()); // empty list if no query
+
+        q = q.Trim().ToLower();
+
+        var results = await _db.Products
+            .Where(p => p.Name.ToLower().Contains(q))
+            .Select(p => new ProductDto(
+                p.ProductId,
+                p.MerchantId,
+                p.TaxCategoryId,
+                p.Name,
+                p.Price,
+                p.Category,
+                p.IsActive
+            ))
+            .ToListAsync();
+
+        return Ok(results);
+    }
+
 }
 
