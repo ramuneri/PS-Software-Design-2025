@@ -5,7 +5,7 @@ public record ProductDto(
     int MerchantId,
     int? TaxCategoryId,
     string Name,
-    decimal Price,
+    decimal? Price,
     string? Category,
     bool IsActive
 );
