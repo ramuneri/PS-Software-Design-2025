@@ -156,5 +156,37 @@ public class ProductsController : ControllerBase
         return Ok(results);
     }
 
+    [HttpGet("picker")]
+    public async Task<ActionResult<IEnumerable<ProductPickerDto>>> Picker([FromQuery] string? query)
+    {
+        var q = _db.Products.AsQueryable();
+
+        // only active products
+        q = q.Where(p => p.IsActive);
+
+        // apply search if provided
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            string text = query.ToLower();
+            q = q.Where(p => p.Name!.ToLower().Contains(text));
+        }
+
+        var result = await q
+            .OrderBy(p => p.Name)
+            .Select(p => new ProductPickerDto(
+                p.ProductId,
+                p.Name!,
+                p.Price
+            ))
+            .Take(50)
+            .ToListAsync();
+
+        return Ok(result);
+    }
+
+
+
+
+
 }
 
