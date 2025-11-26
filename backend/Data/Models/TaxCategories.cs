@@ -9,7 +9,7 @@ public class TaxCategories
 
     public int MerchantId { get; set; }
 
-    public string? Name { get; set; }
+    public string Name { get; set; } = null!;
 
     public Merchant Merchant { get; set; } = null!;
     public ICollection<TaxRate> TaxRates { get; set; } = new List<TaxRate>();

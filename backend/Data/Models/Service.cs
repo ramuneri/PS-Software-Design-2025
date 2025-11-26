@@ -13,6 +13,7 @@ public class Service
     public string? Name { get; set; }
     public decimal? DefaultPrice { get; set; }
     public int? DurationMinutes { get; set; }
+    public string Description { get; set; } = null!;
     public bool IsActive { get; set; }
 
     public Merchant Merchant { get; set; } = null!;
