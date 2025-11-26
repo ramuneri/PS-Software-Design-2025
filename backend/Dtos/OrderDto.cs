@@ -1,14 +1,19 @@
+
+using backend.Enums;
+
 namespace backend.Dtos;
 
 public record OrderDto(
-    int OrderId,
-    string? EmployeeId,
-    string? CustomerId,
-    int? BusinessPricingPolicyId,
-    DateTime? OpenedAt,
-    DateTime? ClosedAt,
-    DateTime? CancelledAt,
+    int Id,
+    string EmployeeId,
+    string CustomerId,
     List<OrderItemDto> Items,
-    List<PaymentDto> Payments,
-    decimal TotalAmount
+    List<PaymentDto>? Payments,
+    decimal SubTotal,
+    decimal Tax,
+    decimal TotalAmount,
+    Status Status,
+    DateTime OpenedAt,
+    DateTime? ClosedAt,
+    DateTime? CancelledAt
 );
