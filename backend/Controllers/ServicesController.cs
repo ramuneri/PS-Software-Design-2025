@@ -1,5 +1,6 @@
 using backend.Dtos;
 using backend.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
@@ -31,6 +32,7 @@ public class ServicesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> Create(CreateServiceRequest request)
     {
         var created = await _services.CreateAsync(request);
@@ -38,6 +40,7 @@ public class ServicesController : ControllerBase
     }
 
     [HttpPatch("{id}")]
+    [Authorize]
     public async Task<IActionResult> Update(int id, UpdateServiceRequest request)
     {
         var updated = await _services.UpdateAsync(id, request);
@@ -46,6 +49,7 @@ public class ServicesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize]
     public async Task<IActionResult> SoftDelete(int id)
     {
         var success = await _services.SoftDeleteAsync(id);
@@ -53,6 +57,7 @@ public class ServicesController : ControllerBase
     }
 
     [HttpPost("{id}/restore")]
+    [Authorize]
     public async Task<IActionResult> Restore(int id)
     {
         var success = await _services.RestoreAsync(id);

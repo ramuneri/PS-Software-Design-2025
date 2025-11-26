@@ -36,6 +36,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IServicesService, ServicesService>();
 builder.Services.AddScoped<DbSeeder>();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddCors(options =>
 {

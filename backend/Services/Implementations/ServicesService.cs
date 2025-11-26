@@ -1,18 +1,27 @@
 using backend.Data;
 using backend.Data.Models;
 using backend.Dtos;
-using Microsoft.EntityFrameworkCore;
 using backend.Services.Interfaces;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace backend.Services.Implementations;
 
 public class ServicesService : IServicesService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly UserManager<User> _userManager;
 
-    public ServicesService(ApplicationDbContext context)
+    public ServicesService(
+        ApplicationDbContext context,
+        IHttpContextAccessor httpContextAccessor,
+        UserManager<User> userManager)
     {
         _context = context;
+        _httpContextAccessor = httpContextAccessor;
+        _userManager = userManager;
     }
 
     public async Task<IEnumerable<ServiceDto>> GetAllAsync(int? taxCategoryId, bool? active)
@@ -58,9 +67,14 @@ public class ServicesService : IServicesService
 
     public async Task<ServiceDto> CreateAsync(CreateServiceRequest request)
     {
+        var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext!.User);
+
+        if (user == null || user.MerchantId == null)
+            throw new Exception("Authenticated user is missing or not assigned to a merchant.");
+
         var service = new Service
         {
-            MerchantId = request.MerchantId,
+            MerchantId = user.MerchantId.Value,
             TaxCategoryId = request.TaxCategoryId,
             Name = request.Name,
             DefaultPrice = request.DefaultPrice,

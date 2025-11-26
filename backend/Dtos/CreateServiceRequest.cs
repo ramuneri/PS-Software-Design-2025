@@ -4,9 +4,6 @@ namespace backend.Dtos;
 
 public class CreateServiceRequest
 {
-    [Required]
-    public int MerchantId { get; set; }
-
     public int? TaxCategoryId { get; set; }
 
     [Required]
