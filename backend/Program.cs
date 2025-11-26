@@ -78,17 +78,28 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 
-if (app.Environment.IsDevelopment())
+using (var scope = app.Services.CreateScope())
 {
-    using (var scope = app.Services.CreateScope())
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+
+    try
     {
-        var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
+        var seeder = services.GetRequiredService<DbSeeder>();
         await seeder.SeedAsync();
     }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred during database seeding");
+    }
+}
 
+if (app.Environment.IsDevelopment())
+{
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 
 app.UseHttpsRedirection();
 
