@@ -5,5 +5,5 @@ namespace backend.Services.Interfaces;
 
 public interface IOrderService
 {
-    public Task<OrderDto?> CreateOrder();
+    public Task<OrderDto?> CreateOrder(string customerId, string employeeId, IEnumerable<OrderItemDto> orderItems, string note);
 }

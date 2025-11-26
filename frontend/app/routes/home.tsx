@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Sidebar from "../components/homeSidebar";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 export function meta() {
   return [{ title: "OMS" }];

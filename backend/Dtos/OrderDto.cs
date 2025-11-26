@@ -12,6 +12,7 @@ public record OrderDto(
     decimal SubTotal,
     decimal Tax,
     decimal TotalAmount,
+    string Note,
     Status Status,
     DateTime OpenedAt,
     DateTime? ClosedAt,

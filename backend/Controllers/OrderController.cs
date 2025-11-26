@@ -5,12 +5,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
 
+public record CreateOrderRequest(string CustomerId, string EmployeeId, IEnumerable<OrderItemDto> Items, string Note);
+
 [ApiController]
 [Route("[controller]")]
 public class OrderController(IOrderService orderService) : ControllerBase
 {
-    public record CreateOrderRequest(string CustomerId, string EmployeeId, IEnumerable<OrderItemDto> Items, string Note);
-
     [HttpGet("{id}", Name = "GetOrder")]
     public async Task<ActionResult<OrderDto>> GetOrder(int id)
     {
@@ -18,15 +18,15 @@ public class OrderController(IOrderService orderService) : ControllerBase
     }
     
     [HttpPost]
-    public async Task<ActionResult<OrderDto?>> CreateOrder(CreateOrderRequest request)
+    public async Task<ActionResult<OrderDto?>> CreateOrder([FromBody] CreateOrderRequest request)
     {
-        var newOrder = await orderService.CreateOrder();
+        var newOrder = await orderService.CreateOrder(request.CustomerId, request.EmployeeId, request.Items, request.Note);
         
         if (newOrder == null) return BadRequest();
         
         var uri = new Uri(Url.Link(
             nameof(GetOrder),
-            new { orderId = newOrder.Id }
+            new { id = newOrder.Id }
         ) ?? throw new InvalidOperationException("Could not generate order URI"));
         
         return Created(uri, newOrder);
