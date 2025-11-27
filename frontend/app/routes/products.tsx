@@ -13,31 +13,69 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const token = localStorage.getItem("access-token");
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products`, {
+  const [search, setSearch] = useState("");
+
+  // Load all products
+  const loadAllProducts = async () => {
+    try {
+      setLoading(true);
+
+      const token = localStorage.getItem("access-token");
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products`, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (!res.ok) throw new Error(`Failed to load products (${res.status})`);
+
+      const data = await res.json();
+      setProducts(data);
+    } catch (err: any) {
+      setError(err.message ?? "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Search function
+  const searchProducts = async () => {
+    if (search.trim() === "") {
+      await loadAllProducts();
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const token = localStorage.getItem("access-token");
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/products/search?q=${encodeURIComponent(
+          search
+        )}`,
+        {
           headers: {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-        });
-
-        if (!res.ok) {
-          throw new Error(`Failed to load products (${res.status})`);
         }
+      );
 
-        const data = await res.json();
-        setProducts(data);
-      } catch (err: any) {
-        setError(err.message ?? "Unknown error");
-      } finally {
-        setLoading(false);
-      }
-    };
+      if (!res.ok) throw new Error(`Search failed (${res.status})`);
 
-    fetchProducts();
+      const data = await res.json();
+      setProducts(data);
+    } catch (err: any) {
+      setError(err.message ?? "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load once on page open
+  useEffect(() => {
+    loadAllProducts();
   }, []);
 
   if (loading) {
@@ -45,13 +83,17 @@ export default function ProductsPage() {
   }
 
   if (error) {
-    return <div className="p-6 text-red-600">Failed to load products: {error}</div>;
+    return (
+      <div className="p-6 text-red-600">
+        Failed to load products: {error}
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-200 p-6 flex justify-center">
       <div className="w-full max-w-none space-y-6">
-        
+
         {/* Header Bar */}
         <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
           Product List
@@ -60,14 +102,16 @@ export default function ProductsPage() {
         {/* Search Section */}
         <div className="bg-gray-300 rounded-md p-6 space-y-6">
           <h2 className="text-center px-4 text-sm font-medium text-black">
-            Search For specific item
+            Search for specific item
           </h2>
 
           <div className="flex justify-center">
             <div className="flex items-center bg-gray-200 border border-gray-400 rounded-md w-full max-w-xl px-3 py-2">
               <input
                 type="text"
-                placeholder=""
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Enter product name"
                 className="grow bg-transparent focus:outline-none text-black"
               />
               <span className="text-black text-xl">⌕</span>
@@ -75,7 +119,10 @@ export default function ProductsPage() {
           </div>
 
           <div className="flex justify-center">
-            <button className="bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded text-black">
+            <button
+              onClick={searchProducts}
+              className="bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded text-black"
+            >
               Search
             </button>
           </div>
