@@ -1,11 +1,8 @@
 using backend.Data;
-using backend.Data.Models;
 using backend.Dtos;
-using backend.Dtos.Products;
-using Microsoft.AspNetCore.Authorization;
+using backend.Data.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace backend.Controllers;
 
@@ -19,6 +16,23 @@ public class ProductsController : ControllerBase
     {
         _db = db;
     }
+
+    public record CreateProductRequest(
+        string Name,
+        decimal? Price,
+        string? Category,
+        int? TaxCategoryId,
+        bool? IsActive
+    );
+
+    public record UpdateProductRequest(
+        string? Name,
+        decimal? Price,
+        string? Category,
+        int? TaxCategoryId,
+        bool? IsActive
+    );
+
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
@@ -57,12 +71,10 @@ public class ProductsController : ControllerBase
         ));
     }
 
-
     [HttpPost]
-    public async Task<ActionResult<ProductDto>> CreateProduct(ProductCreateDto dto)
+    public async Task<ActionResult<ProductDto>> CreateProduct(CreateProductRequest dto)
     {
-        // TODO: get merchant ID from authenticated user
-        // for now using merchant 1 from seeding
+        // TODO: replace later when auth is implemented
         int merchantId = 1;
 
         var product = new Product
@@ -72,7 +84,7 @@ public class ProductsController : ControllerBase
             Price = dto.Price,
             Category = dto.Category,
             TaxCategoryId = dto.TaxCategoryId,
-            IsActive = dto.IsActive
+            IsActive = dto.IsActive ?? true
         };
 
         _db.Products.Add(product);
@@ -90,7 +102,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPatch("{id:int}")]
-    public async Task<ActionResult> UpdateProduct(int id, ProductUpdateDto dto)
+    public async Task<ActionResult> UpdateProduct(int id, UpdateProductRequest dto)
     {
         var product = await _db.Products.FindAsync(id);
 
@@ -116,7 +128,6 @@ public class ProductsController : ControllerBase
         return NoContent();
     }
 
-
     [HttpDelete("{id:int}")]
     public async Task<ActionResult> DeleteProduct(int id)
     {
@@ -131,17 +142,16 @@ public class ProductsController : ControllerBase
         return NoContent();
     }
 
-
     [HttpGet("search")]
     public async Task<ActionResult<IEnumerable<ProductDto>>> SearchProducts([FromQuery] string q)
     {
         if (string.IsNullOrWhiteSpace(q))
-            return Ok(new List<ProductDto>()); // empty list if no query
+            return Ok(new List<ProductDto>());
 
         q = q.Trim().ToLower();
 
         var results = await _db.Products
-            .Where(product => product.Name.ToLower().Contains(q))
+            .Where(product => product.Name!.ToLower().Contains(q))
             .Select(product => new ProductDto(
                 product.ProductId,
                 product.MerchantId,
@@ -155,34 +165,4 @@ public class ProductsController : ControllerBase
 
         return Ok(results);
     }
-
-    [HttpGet("picker")]
-    public async Task<ActionResult<IEnumerable<ProductPickerDto>>> Picker([FromQuery] string? query)
-    {
-        var q = _db.Products.AsQueryable();
-
-        // only active products
-        q = q.Where(product => product.IsActive);
-
-        // apply search if provided
-        if (!string.IsNullOrWhiteSpace(query))
-        {
-            string text = query.ToLower();
-            q = q.Where(product => product.Name!.ToLower().Contains(text));
-        }
-
-        var result = await q
-            .OrderBy(product => product.Name)
-            .Select(product => new ProductPickerDto(
-                product.ProductId,
-                product.Name!,
-                product.Price
-            ))
-            .Take(50)
-            .ToListAsync();
-
-        return Ok(result);
-    }
-
 }
-
