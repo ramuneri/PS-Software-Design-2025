@@ -24,14 +24,14 @@ public class ProductsController : ControllerBase
     public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
     {
         var products = await _db.Products
-            .Select(p => new ProductDto(
-                p.ProductId,
-                p.MerchantId,
-                p.TaxCategoryId,
-                p.Name,
-                p.Price,
-                p.Category,
-                p.IsActive
+            .Select(product => new ProductDto(
+                product.ProductId,
+                product.MerchantId,
+                product.TaxCategoryId,
+                product.Name,
+                product.Price,
+                product.Category,
+                product.IsActive
             ))
             .ToListAsync();
 
@@ -41,19 +41,19 @@ public class ProductsController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<ActionResult<ProductDto>> GetProduct(int id)
     {
-        var p = await _db.Products.FindAsync(id);
+        var product = await _db.Products.FindAsync(id);
 
-        if (p == null)
+        if (product == null)
             return NotFound();
 
         return Ok(new ProductDto(
-            p.ProductId,
-            p.MerchantId,
-            p.TaxCategoryId,
-            p.Name,
-            p.Price,
-            p.Category,
-            p.IsActive
+            product.ProductId,
+            product.MerchantId,
+            product.TaxCategoryId,
+            product.Name,
+            product.Price,
+            product.Category,
+            product.IsActive
         ));
     }
 
@@ -141,15 +141,15 @@ public class ProductsController : ControllerBase
         q = q.Trim().ToLower();
 
         var results = await _db.Products
-            .Where(p => p.Name.ToLower().Contains(q))
-            .Select(p => new ProductDto(
-                p.ProductId,
-                p.MerchantId,
-                p.TaxCategoryId,
-                p.Name,
-                p.Price,
-                p.Category,
-                p.IsActive
+            .Where(product => product.Name.ToLower().Contains(q))
+            .Select(product => new ProductDto(
+                product.ProductId,
+                product.MerchantId,
+                product.TaxCategoryId,
+                product.Name,
+                product.Price,
+                product.Category,
+                product.IsActive
             ))
             .ToListAsync();
 
@@ -162,31 +162,27 @@ public class ProductsController : ControllerBase
         var q = _db.Products.AsQueryable();
 
         // only active products
-        q = q.Where(p => p.IsActive);
+        q = q.Where(product => product.IsActive);
 
         // apply search if provided
         if (!string.IsNullOrWhiteSpace(query))
         {
             string text = query.ToLower();
-            q = q.Where(p => p.Name!.ToLower().Contains(text));
+            q = q.Where(product => product.Name!.ToLower().Contains(text));
         }
 
         var result = await q
-            .OrderBy(p => p.Name)
-            .Select(p => new ProductPickerDto(
-                p.ProductId,
-                p.Name!,
-                p.Price
+            .OrderBy(product => product.Name)
+            .Select(product => new ProductPickerDto(
+                product.ProductId,
+                product.Name!,
+                product.Price
             ))
             .Take(50)
             .ToListAsync();
 
         return Ok(result);
     }
-
-
-
-
 
 }
 
