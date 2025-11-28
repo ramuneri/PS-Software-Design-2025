@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 export default function DebugPage() {
-  const API = "http://localhost:5141";
+  const API = "http://localhost:7035";
 
   const [merchant, setMerchant] = useState<any>(null);
   const [product, setProduct] = useState<any>(null);
