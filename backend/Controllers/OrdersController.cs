@@ -9,7 +9,7 @@ public record CreateOrderRequest(string CustomerId, string EmployeeId, IEnumerab
 
 [ApiController]
 [Route("[controller]")]
-public class OrderController(IOrderService orderService) : ControllerBase
+public class OrdersController(IOrderService orderService) : ControllerBase
 {
     [HttpGet("{id}", Name = "GetOrder")]
     public async Task<ActionResult<OrderDto>> GetOrder(int id)
