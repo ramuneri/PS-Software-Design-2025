@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using backend.Controllers;
 using backend.Data;
 using backend.Data.Models;
 using backend.Services.Implementations;
@@ -69,6 +70,8 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<ProductsController>();
 builder.Services.AddScoped<IServicesService, ServicesService>();
 builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddHttpContextAccessor();

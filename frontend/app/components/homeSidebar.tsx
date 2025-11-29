@@ -48,25 +48,27 @@ export default function Sidebar() {
         isActive={activeSection === "orders"}
         onToggle={() => toggleSection("orders")}
         links={[
-          { name: "Create Order", path: "/orders" },
+          { name: "Create Order", path: "/orders/create" },
           { name: "Delete Order", path: "/orders" },
           { name: "Modify Order", path: "/orders" },
         ]}
       />
+      
       <SidebarSection
         title="Inventory"
         isActive={activeSection === "inventory"}
         onToggle={() => toggleSection("inventory")}
         links={[
-          { name: "Service List", path: "/inventory" },
-          { name: "Product List", path: "/inventory" },
-          { name: "Discount List", path: "/inventory" },
-          { name: "Service Charge List", path: "/inventory" },
-          { name: "Taxes List", path: "/inventory" },
-          { name: "Payment List", path: "/inventory" },
-          { name: "Giftcard List", path: "/inventory" },
+          { name: "Service List", path: "/services" },
+          { name: "Product List", path: "/products" },
+          { name: "Discount List", path: "/discounts" },
+          { name: "Service Charge List", path: "/service-charges" },
+          { name: "Taxes List", path: "/taxes" },
+          { name: "Payment List", path: "/payments" },
+          { name: "Giftcard List", path: "/giftcards" },
         ]}
       />
+
       <SidebarSection
         title="Calendar"
         isActive={activeSection === "calendar"}
