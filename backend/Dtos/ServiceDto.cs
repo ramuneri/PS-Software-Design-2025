@@ -7,5 +7,6 @@ public record ServiceDto(
     string? Name,
     decimal? DefaultPrice,
     int? DurationMinutes,
+    string Description,
     bool IsActive
 );

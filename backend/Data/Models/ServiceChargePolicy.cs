@@ -10,8 +10,8 @@ public class ServiceChargePolicy
     public int? ServiceChargePolicyId { get; set; }
     public int? OrderId { get; set; }
 
-    public string? Name { get; set; }
-    public string? Type { get; set; }
+    public string Name { get; set; } = null!;
+    public string Type { get; set; } = null!;
     public decimal? Value { get; set; }
     public bool IsActive { get; set; }
     public DateTime? CreatedAt { get; set; }

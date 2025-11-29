@@ -45,9 +45,9 @@ cd backend
 dotnet restore
 dotnet run
 ```
-The API will run at http://localhost:5141
+The API will run at http://localhost:7035
  by default.
-Swagger is available at: http://localhost:5141/swagger
+Swagger is available at: http://localhost:7035/swagger
 
 #### 4. Frontend Setup
 Run the frontend:

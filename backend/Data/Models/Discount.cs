@@ -9,7 +9,7 @@ public class Discount
 
     public int? ServiceId { get; set; }
 
-    public string? Name { get; set; }
+    public string Name { get; set; } = null!;
     public string? Code { get; set; }
     public string? Scope { get; set; }
     public string? Type { get; set; }
