@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 export default function DebugPage() {
-  const API = "http://localhost:7035";
+  const API = import.meta.env.VITE_API_URL;
 
   const [merchant, setMerchant] = useState<any>(null);
   const [product, setProduct] = useState<any>(null);
