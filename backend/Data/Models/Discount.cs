@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using backend.Services.Interfaces;
 
 namespace backend.Data.Models;
 
