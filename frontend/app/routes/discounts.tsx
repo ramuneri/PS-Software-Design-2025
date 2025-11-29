@@ -72,7 +72,6 @@ export default function DiscountsPage() {
           Discount List
         </div>
 
-        {/* Show inactive toggle */}
         <div className="flex items-center gap-3">
           <input
             type="checkbox"
@@ -82,66 +81,69 @@ export default function DiscountsPage() {
           <span className="text-black">Show inactive</span>
         </div>
 
-        {/* TABLE HEADERS */}
         <div className="grid grid-cols-8 px-4 text-sm font-medium text-black">
-          <span>Name</span>
-          <span>Code</span>
-          <span>Target</span>
-          <span>Scope</span>
-          <span>Value</span>
-          <span>Starts</span>
-          <span>Ends</span>
+        <span>Name</span>
+        <span>Code</span>
+        <span>Target</span>
+        <span>Scope</span>
+        <span>Value</span>
+        <span>Starts</span>
+        <span>Ends</span>
+        <span className="text-right">Actions</span>
         </div>
 
-        {/* ROW LIST */}
+
         <div className="space-y-3">
-          {discounts.map((d) => (
+          {discounts.map((discount) => (
             <div
-              key={d.id}
-              className={`grid grid-cols-7 bg-gray-300 text-black rounded-md px-4 py-3 items-center ${
-                !d.isActive ? "opacity-50" : ""
-              }`}
+            key={discount.id}
+            className={`grid grid-cols-8 bg-gray-300 text-black rounded-md px-4 py-3 items-center ${
+                !discount.isActive ? "opacity-50" : ""
+            }`}
             >
-              <span>{d.name}</span>
-              <span>{d.code || "-"}</span>
+            <span>{discount.name}</span>
+            <span>{discount.code || "-"}</span>
+            <span>
+                {discount.productId
+                ? `Product #${discount.productId}`
+                : discount.serviceId
+                ? `Service #${discount.serviceId}`
+                : "-"}
+            </span>
+            <span>{discount.scope}</span>
+            <span>{discount.value ?? "-"}</span>
+            <span>{discount.startsAt ? new Date(discount.startsAt).toLocaleDateString() : "-"}</span>
+            <span>{discount.endsAt ? new Date(discount.endsAt).toLocaleDateString() : "-"}</span>
 
-              {/* TARGET: Product or Service */}
-              <span>
-                {d.productId
-                  ? `Product #${d.productId}`
-                  : d.serviceId
-                  ? `Service #${d.serviceId}`
-                  : "-"}
-              </span>
+            <div className="flex gap-2 justify-end">
+                <button
+                className="px-3 py-1 bg-blue-400 hover:bg-blue-500 text-black rounded"
+                onClick={() => {/* TODO navigate to edit page */}}
+                >
+                Edit
+                </button>
 
-              <span>{d.scope}</span>
-              <span>{d.value ?? "-"}</span>
-              <span>{d.startsAt ? new Date(d.startsAt).toLocaleDateString() : "-"}</span>
-              <span>{d.endsAt ? new Date(d.endsAt).toLocaleDateString() : "-"}</span>
-
-              {/* ACTION BUTTONS */}
-              <div className="flex gap-2 mt-2 col-span-7">
-                {d.isActive ? (
-                  <button
+                {discount.isActive ? (
+                <button
                     className="px-3 py-1 bg-red-400 hover:bg-red-500 text-black rounded"
-                    onClick={() => deleteDiscount(d.id)}
-                  >
+                    onClick={() => deleteDiscount(discount.id)}
+                >
                     Delete
-                  </button>
+                </button>
                 ) : (
-                  <button
+                <button
                     className="px-3 py-1 bg-green-400 hover:bg-green-500 text-black rounded"
-                    onClick={() => restoreDiscount(d.id)}
-                  >
+                    onClick={() => restoreDiscount(discount.id)}
+                >
                     Restore
-                  </button>
+                </button>
                 )}
-              </div>
             </div>
+            </div>
+
           ))}
         </div>
 
-        {/* CREATE BUTTON */}
         <div className="pt-6">
           <button className="w-48 bg-gray-400 hover:bg-gray-500 rounded-md py-2 text-black">
             Create Discount
