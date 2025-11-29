@@ -48,7 +48,7 @@ export default function Sidebar() {
         isActive={activeSection === "orders"}
         onToggle={() => toggleSection("orders")}
         links={[
-          { name: "Create Order", path: "/orders" },
+          { name: "Create Order", path: "/orders/create" },
           { name: "Delete Order", path: "/orders" },
           { name: "Modify Order", path: "/orders" },
         ]}
