@@ -8,6 +8,7 @@ using backend.Services.Implementations;
 using backend.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,8 +36,13 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+builder.Services.AddScoped<IDiscountService, DiscountService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+
+// will be fixed
 builder.Services.AddScoped<ProductsController>();
+
 builder.Services.AddScoped<DbSeeder>();
 
 builder.Services.AddCors(options =>
