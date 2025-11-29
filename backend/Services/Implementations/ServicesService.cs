@@ -67,10 +67,18 @@ public class ServicesService : IServicesService
 
     public async Task<ServiceDto> CreateAsync(CreateServiceRequest request)
     {
-        var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext!.User);
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null)
+            throw new UnauthorizedAccessException("No HTTP context available");
 
+        var userId = httpContext.User.FindFirst("sub")?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+            throw new UnauthorizedAccessException("User ID not found in token");
+
+        var user = await _userManager.FindByIdAsync(userId);
         if (user == null || user.MerchantId == null)
-            throw new Exception("Authenticated user is missing or not assigned to a merchant.");
+            throw new Exception("User not found or not assigned to a merchant.");
 
         var service = new Service
         {
