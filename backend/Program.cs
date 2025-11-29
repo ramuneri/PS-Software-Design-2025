@@ -36,12 +36,13 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
-<<<<<<< HEAD
+
 builder.Services.AddScoped<IDiscountService, DiscountService>();
-=======
 builder.Services.AddScoped<IOrderService, OrderService>();
+
+// will be fixed
 builder.Services.AddScoped<ProductsController>();
->>>>>>> main
+
 builder.Services.AddScoped<DbSeeder>();
 
 builder.Services.AddCors(options =>
