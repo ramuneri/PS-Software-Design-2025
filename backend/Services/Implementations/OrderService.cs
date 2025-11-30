@@ -1,5 +1,3 @@
-
-using backend.Controllers;
 using backend.Data;
 using backend.Data.Models;
 using backend.Dtos;
@@ -9,12 +7,21 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Services.Implementations;
 
-public class OrderService(ApplicationDbContext context, ProductsController productsController) : IOrderService
+public class OrderService : IOrderService
 {
+    private readonly ApplicationDbContext context;
+    private readonly IProductService productService;
+
+    public OrderService(ApplicationDbContext context, IProductService productService)
+    {
+        this.context = context;
+        this.productService = productService;
+    }
+
     public async Task<OrderDto?> CreateOrder(string customerId, string employeeId, IEnumerable<OrderItemDto> orderItems, string note)
     {
         orderItems = orderItems.ToList();
-    
+
         var order = new Order
         {
             MerchantId = 1,
@@ -23,10 +30,10 @@ public class OrderService(ApplicationDbContext context, ProductsController produ
             Note = note,
             OpenedAt = DateTime.UtcNow
         };
-    
+
         await context.Orders.AddAsync(order);
         await context.SaveChangesAsync();
-    
+
         var orderItemEntities = orderItems.Select(item => new OrderItem
         {
             OrderId = order.Id,
@@ -36,20 +43,19 @@ public class OrderService(ApplicationDbContext context, ProductsController produ
 
         await context.OrderItems.AddRangeAsync(orderItemEntities);
         await context.SaveChangesAsync();
-    
+
         decimal subTotal = 0;
         var orderItemDtos = new List<OrderItemDto>();
-    
+
         foreach (var orderItemEntity in orderItemEntities)
         {
-            var actionResult = await productsController.GetProduct(orderItemEntity.ProductId!.Value);
+            var product = await productService.GetByIdAsync(orderItemEntity.ProductId!.Value);
 
-            if (actionResult.Result is OkObjectResult ok)
+            if (product != null)
             {
-                var product = (ProductDto)ok.Value!;
                 var itemTotal = product.Price * orderItemEntity.Quantity;
                 subTotal += itemTotal ?? 0;
-                
+
                 orderItemDtos.Add(new OrderItemDto(
                     orderItemEntity.Id,
                     orderItemEntity.OrderId,
