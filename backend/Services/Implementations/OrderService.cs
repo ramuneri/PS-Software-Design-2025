@@ -14,7 +14,7 @@ public class OrderService(ApplicationDbContext context, ProductsController produ
     public async Task<OrderDto?> CreateOrder(string customerId, string employeeId, IEnumerable<OrderItemDto> orderItems, string note)
     {
         orderItems = orderItems.ToList();
-    
+
         var order = new Order
         {
             MerchantId = 1,
@@ -23,10 +23,10 @@ public class OrderService(ApplicationDbContext context, ProductsController produ
             Note = note,
             OpenedAt = DateTime.UtcNow
         };
-    
+
         await context.Orders.AddAsync(order);
         await context.SaveChangesAsync();
-    
+
         var orderItemEntities = orderItems.Select(item => new OrderItem
         {
             OrderId = order.Id,
@@ -36,10 +36,10 @@ public class OrderService(ApplicationDbContext context, ProductsController produ
 
         await context.OrderItems.AddRangeAsync(orderItemEntities);
         await context.SaveChangesAsync();
-    
+
         decimal subTotal = 0;
         var orderItemDtos = new List<OrderItemDto>();
-    
+
         foreach (var orderItemEntity in orderItemEntities)
         {
             var actionResult = await productsController.GetProduct(orderItemEntity.ProductId!.Value);
@@ -49,7 +49,7 @@ public class OrderService(ApplicationDbContext context, ProductsController produ
                 var product = (ProductDto)ok.Value!;
                 var itemTotal = product.Price * orderItemEntity.Quantity;
                 subTotal += itemTotal ?? 0;
-                
+
                 orderItemDtos.Add(new OrderItemDto(
                     orderItemEntity.Id,
                     orderItemEntity.OrderId,
