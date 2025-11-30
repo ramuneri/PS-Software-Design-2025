@@ -16,8 +16,17 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ProductDto>>> GetAll([FromQuery] string? q)
-        => Ok(await _service.GetAllAsync(q));
+    public async Task<ActionResult<IEnumerable<ProductDto>>> GetAll()
+        => Ok(await _service.GetAllAsync());
+
+    [HttpGet("search")]
+    public async Task<ActionResult<IEnumerable<ProductDto>>> Search([FromQuery] string q)
+    {
+        if (string.IsNullOrWhiteSpace(q))
+            return Ok(new List<ProductDto>());
+
+        return Ok(await _service.SearchAsync(q));
+    }
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<ProductDto>> GetById(int id)

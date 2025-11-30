@@ -15,17 +15,19 @@ public class ProductService : IProductService
         _db = db;
     }
 
-    public async Task<IEnumerable<ProductDto>> GetAllAsync(string? search = null)
+    public async Task<IEnumerable<ProductDto>> GetAllAsync()
     {
-        var query = _db.Products.AsQueryable();
+        return await _db.Products
+            .Select(p => ToDto(p))
+            .ToListAsync();
+    }
 
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            search = search.Trim().ToLower();
-            query = query.Where(p => p.Name!.ToLower().Contains(search));
-        }
+    public async Task<IEnumerable<ProductDto>> SearchAsync(string query)
+    {
+        query = query.Trim().ToLower();
 
-        return await query
+        return await _db.Products
+            .Where(p => p.Name!.ToLower().Contains(query))
             .Select(p => ToDto(p))
             .ToListAsync();
     }
@@ -38,7 +40,7 @@ public class ProductService : IProductService
 
     public async Task<ProductDto> CreateAsync(CreateProductDto dto)
     {
-        int merchantId = 1; // TODO: replace when auth is added
+        int merchantId = 1; // TODO: replace with real merchant after auth
 
         var product = new Product
         {
@@ -58,18 +60,18 @@ public class ProductService : IProductService
 
     public async Task<ProductDto?> UpdateAsync(int id, UpdateProductDto dto)
     {
-        var product = await _db.Products.FindAsync(id);
-        if (product == null)
+        var p = await _db.Products.FindAsync(id);
+        if (p == null)
             return null;
 
-        if (dto.Name != null) product.Name = dto.Name;
-        if (dto.Price.HasValue) product.Price = dto.Price.Value;
-        if (dto.Category != null) product.Category = dto.Category;
-        if (dto.TaxCategoryId.HasValue) product.TaxCategoryId = dto.TaxCategoryId;
-        if (dto.IsActive.HasValue) product.IsActive = dto.IsActive.Value;
+        if (dto.Name != null) p.Name = dto.Name;
+        if (dto.Price.HasValue) p.Price = dto.Price.Value;
+        if (dto.Category != null) p.Category = dto.Category;
+        if (dto.TaxCategoryId.HasValue) p.TaxCategoryId = dto.TaxCategoryId;
+        if (dto.IsActive.HasValue) p.IsActive = dto.IsActive.Value;
 
         await _db.SaveChangesAsync();
-        return ToDto(product);
+        return ToDto(p);
     }
 
     public async Task<bool> DeleteAsync(int id)

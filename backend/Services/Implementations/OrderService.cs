@@ -49,7 +49,6 @@ public class OrderService : IOrderService
 
         foreach (var orderItemEntity in orderItemEntities)
         {
-            // ✔ Replace controller call with service call
             var product = await productService.GetByIdAsync(orderItemEntity.ProductId!.Value);
 
             if (product != null)
