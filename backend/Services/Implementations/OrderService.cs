@@ -1,5 +1,3 @@
-
-using backend.Controllers;
 using backend.Data;
 using backend.Data.Models;
 using backend.Dtos;
@@ -9,8 +7,17 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Services.Implementations;
 
-public class OrderService(ApplicationDbContext context, ProductsController productsController) : IOrderService
+public class OrderService : IOrderService
 {
+    private readonly ApplicationDbContext context;
+    private readonly IProductService productService;
+
+    public OrderService(ApplicationDbContext context, IProductService productService)
+    {
+        this.context = context;
+        this.productService = productService;
+    }
+
     public async Task<OrderDto?> CreateOrder(string customerId, string employeeId, IEnumerable<OrderItemDto> orderItems, string note)
     {
         orderItems = orderItems.ToList();
@@ -42,11 +49,11 @@ public class OrderService(ApplicationDbContext context, ProductsController produ
 
         foreach (var orderItemEntity in orderItemEntities)
         {
-            var actionResult = await productsController.GetProduct(orderItemEntity.ProductId!.Value);
+            // ✔ Replace controller call with service call
+            var product = await productService.GetByIdAsync(orderItemEntity.ProductId!.Value);
 
-            if (actionResult.Result is OkObjectResult ok)
+            if (product != null)
             {
-                var product = (ProductDto)ok.Value!;
                 var itemTotal = product.Price * orderItemEntity.Quantity;
                 subTotal += itemTotal ?? 0;
 
