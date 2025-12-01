@@ -5,6 +5,7 @@ using backend.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace backend.Services.Implementations;
 
@@ -71,7 +72,7 @@ public class ServicesService : IServicesService
         if (httpContext == null)
             throw new UnauthorizedAccessException("No HTTP context available");
 
-        var userId = httpContext.User.FindFirst("sub")?.Value;
+        var userId = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrEmpty(userId))
             throw new UnauthorizedAccessException("User ID not found in token");
