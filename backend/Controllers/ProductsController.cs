@@ -1,5 +1,6 @@
 using backend.Dtos;
 using backend.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
@@ -14,6 +15,7 @@ public class ProductsController : ControllerBase
     {
         _service = service;
     }
+
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ProductDto>>> GetAll()
@@ -35,6 +37,9 @@ public class ProductsController : ControllerBase
         return result == null ? NotFound() : Ok(result);
     }
 
+
+
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<ProductDto>> Create(CreateProductDto dto)
     {
@@ -42,6 +47,7 @@ public class ProductsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
+    [Authorize]
     [HttpPatch("{id:int}")]
     public async Task<ActionResult<ProductDto>> Update(int id, UpdateProductDto dto)
     {
@@ -49,6 +55,7 @@ public class ProductsController : ControllerBase
         return updated == null ? NotFound() : Ok(updated);
     }
 
+    [Authorize]
     [HttpDelete("{id:int}")]
     public async Task<ActionResult> Delete(int id)
         => await _service.DeleteAsync(id) ? NoContent() : NotFound();
