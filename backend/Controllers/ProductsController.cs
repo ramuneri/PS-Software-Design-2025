@@ -1,8 +1,7 @@
-using backend.Data;
 using backend.Dtos;
-using backend.Data.Models;
+using backend.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace backend.Controllers;
 
@@ -10,159 +9,54 @@ namespace backend.Controllers;
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
 {
-    private readonly ApplicationDbContext _db;
+    private readonly IProductService _service;
 
-    public ProductsController(ApplicationDbContext db)
+    public ProductsController(IProductService service)
     {
-        _db = db;
+        _service = service;
     }
-
-    public record CreateProductRequest(
-        string Name,
-        decimal? Price,
-        string? Category,
-        int? TaxCategoryId,
-        bool? IsActive
-    );
-
-    public record UpdateProductRequest(
-        string? Name,
-        decimal? Price,
-        string? Category,
-        int? TaxCategoryId,
-        bool? IsActive
-    );
 
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
-    {
-        var products = await _db.Products
-            .Select(product => new ProductDto(
-                product.ProductId,
-                product.MerchantId,
-                product.TaxCategoryId,
-                product.Name,
-                product.Price,
-                product.Category,
-                product.IsActive
-            ))
-            .ToListAsync();
-
-        return Ok(products);
-    }
-
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<ProductDto>> GetProduct(int id)
-    {
-        var product = await _db.Products.FindAsync(id);
-
-        if (product == null)
-            return NotFound();
-
-        return Ok(new ProductDto(
-            product.ProductId,
-            product.MerchantId,
-            product.TaxCategoryId,
-            product.Name,
-            product.Price,
-            product.Category,
-            product.IsActive
-        ));
-    }
-
-    [HttpPost]
-    public async Task<ActionResult<ProductDto>> CreateProduct(CreateProductRequest dto)
-    {
-        // TODO: replace later when auth is implemented
-        int merchantId = 1;
-
-        var product = new Product
-        {
-            MerchantId = merchantId,
-            Name = dto.Name,
-            Price = dto.Price,
-            Category = dto.Category,
-            TaxCategoryId = dto.TaxCategoryId,
-            IsActive = dto.IsActive ?? true
-        };
-
-        _db.Products.Add(product);
-        await _db.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetProduct), new { id = product.ProductId }, new ProductDto(
-            product.ProductId,
-            product.MerchantId,
-            product.TaxCategoryId,
-            product.Name,
-            product.Price,
-            product.Category,
-            product.IsActive
-        ));
-    }
-
-    [HttpPatch("{id:int}")]
-    public async Task<ActionResult> UpdateProduct(int id, UpdateProductRequest dto)
-    {
-        var product = await _db.Products.FindAsync(id);
-
-        if (product == null)
-            return NotFound();
-
-        if (dto.Name != null)
-            product.Name = dto.Name;
-
-        if (dto.Price.HasValue)
-            product.Price = dto.Price.Value;
-
-        if (dto.Category != null)
-            product.Category = dto.Category;
-
-        if (dto.TaxCategoryId.HasValue)
-            product.TaxCategoryId = dto.TaxCategoryId;
-
-        if (dto.IsActive.HasValue)
-            product.IsActive = dto.IsActive.Value;
-
-        await _db.SaveChangesAsync();
-        return NoContent();
-    }
-
-    [HttpDelete("{id:int}")]
-    public async Task<ActionResult> DeleteProduct(int id)
-    {
-        var product = await _db.Products.FindAsync(id);
-
-        if (product == null)
-            return NotFound();
-
-        _db.Products.Remove(product);
-        await _db.SaveChangesAsync();
-
-        return NoContent();
-    }
+    public async Task<ActionResult<IEnumerable<ProductDto>>> GetAll()
+        => Ok(await _service.GetAllAsync());
 
     [HttpGet("search")]
-    public async Task<ActionResult<IEnumerable<ProductDto>>> SearchProducts([FromQuery] string q)
+    public async Task<ActionResult<IEnumerable<ProductDto>>> Search([FromQuery] string q)
     {
         if (string.IsNullOrWhiteSpace(q))
             return Ok(new List<ProductDto>());
 
-        q = q.Trim().ToLower();
-
-        var results = await _db.Products
-            .Where(product => product.Name!.ToLower().Contains(q))
-            .Select(product => new ProductDto(
-                product.ProductId,
-                product.MerchantId,
-                product.TaxCategoryId,
-                product.Name,
-                product.Price,
-                product.Category,
-                product.IsActive
-            ))
-            .ToListAsync();
-
-        return Ok(results);
+        return Ok(await _service.SearchAsync(q));
     }
+
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<ProductDto>> GetById(int id)
+    {
+        var result = await _service.GetByIdAsync(id);
+        return result == null ? NotFound() : Ok(result);
+    }
+
+
+
+    [Authorize]
+    [HttpPost]
+    public async Task<ActionResult<ProductDto>> Create(CreateProductDto dto)
+    {
+        var created = await _service.CreateAsync(dto);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+    }
+
+    [Authorize]
+    [HttpPatch("{id:int}")]
+    public async Task<ActionResult<ProductDto>> Update(int id, UpdateProductDto dto)
+    {
+        var updated = await _service.UpdateAsync(id, dto);
+        return updated == null ? NotFound() : Ok(updated);
+    }
+
+    [Authorize]
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult> Delete(int id)
+        => await _service.DeleteAsync(id) ? NoContent() : NotFound();
 }
