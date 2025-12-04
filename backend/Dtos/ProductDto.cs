@@ -1,7 +1,7 @@
 namespace backend.Dtos;
 
 public record ProductDto(
-    int ProductId,
+    int Id,
     int MerchantId,
     int? TaxCategoryId,
     string Name,
