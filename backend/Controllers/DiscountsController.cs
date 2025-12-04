@@ -1,7 +1,7 @@
 using backend.Dtos;
-using backend.Services;
-using backend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using backend.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace backend.Controllers;
 
@@ -27,6 +27,9 @@ public class DiscountsController : ControllerBase
         return result == null ? NotFound() : Ok(result);
     }
 
+
+
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<DiscountDto>> Create(CreateDiscountDto dto)
     {
@@ -41,6 +44,7 @@ public class DiscountsController : ControllerBase
         }
     }
 
+    [Authorize]
     [HttpPatch("{id:int}")]
     public async Task<ActionResult<DiscountDto>> Update(int id, UpdateDiscountDto dto)
     {
@@ -55,11 +59,13 @@ public class DiscountsController : ControllerBase
         }
     }
 
+    [Authorize]
     [HttpDelete("{id:int}")]
     public async Task<ActionResult> Delete(int id)
         => await _service.DeleteAsync(id) ? NoContent() : NotFound();
 
 
+    [Authorize]
     [HttpPost("{id:int}/restore")]
     public async Task<ActionResult> Restore(int id)
         => await _service.RestoreAsync(id) ? NoContent() : NotFound();
