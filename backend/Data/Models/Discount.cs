@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using backend.Services.Interfaces;
 
 namespace backend.Data.Models;
 
@@ -6,7 +7,7 @@ public class Discount
 {
     [Key]
     public int Id { get; set; }
-
+    public int? ProductId { get; set; }
     public int? ServiceId { get; set; }
 
     public string Name { get; set; } = null!;
