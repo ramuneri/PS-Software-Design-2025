@@ -1,13 +1,13 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using backend.Controllers;
 using backend.Data;
+using backend.Services;
 using backend.Data.Models;
-using backend.Services.Implementations;
 using backend.Services.Interfaces;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
+using backend.Services.Implementations;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -71,7 +71,6 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddScoped<ProductsController>();
 builder.Services.AddScoped<IServicesService, ServicesService>();
 builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddHttpContextAccessor();
