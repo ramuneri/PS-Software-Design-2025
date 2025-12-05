@@ -9,8 +9,9 @@ public class User : IdentityUser
     public string? Name { get; set; }
     public string? Surname { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
     public DateTime LastLoginAt { get; set; }
-    public string? Role { get; set; }
+    public string Role { get; set; } = null!;
     public bool IsSuperAdmin { get; set; }
 
     public Merchant? Merchant { get; set; }
