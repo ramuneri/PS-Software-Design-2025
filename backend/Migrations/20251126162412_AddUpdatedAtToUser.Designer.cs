@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using backend.Data;
@@ -11,9 +12,11 @@ using backend.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251126162412_AddUpdatedAtToUser")]
+    partial class AddUpdatedAtToUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -157,13 +160,13 @@ namespace backend.Migrations
 
             modelBuilder.Entity("OrderServiceChargePolicy", b =>
                 {
-                    b.Property<int>("OrdersId")
+                    b.Property<int>("OrdersOrderId")
                         .HasColumnType("integer");
 
                     b.Property<int>("ServiceChargePoliciesId")
                         .HasColumnType("integer");
 
-                    b.HasKey("OrdersId", "ServiceChargePoliciesId");
+                    b.HasKey("OrdersOrderId", "ServiceChargePoliciesId");
 
                     b.HasIndex("ServiceChargePoliciesId");
 
@@ -255,9 +258,6 @@ namespace backend.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int?>("ProductId")
-                        .HasColumnType("integer");
 
                     b.Property<string>("Scope")
                         .HasColumnType("text");
@@ -454,11 +454,11 @@ namespace backend.Migrations
 
             modelBuilder.Entity("backend.Data.Models.Order", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<int>("OrderId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("OrderId"));
 
                     b.Property<int?>("BusinessPricingPolicyId")
                         .HasColumnType("integer");
@@ -475,19 +475,13 @@ namespace backend.Migrations
                     b.Property<string>("EmployeeId")
                         .HasColumnType("text");
 
-                    b.Property<int>("MerchantId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("OpenedAt")
+                    b.Property<DateTime?>("OpenedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("TipBasedOnDiscountId")
                         .HasColumnType("integer");
 
-                    b.HasKey("Id");
+                    b.HasKey("OrderId");
 
                     b.HasIndex("BusinessPricingPolicyId");
 
@@ -672,7 +666,6 @@ namespace backend.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("Name")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<decimal?>("Price")
@@ -1077,7 +1070,7 @@ namespace backend.Migrations
                 {
                     b.HasOne("backend.Data.Models.Order", null)
                         .WithMany()
-                        .HasForeignKey("OrdersId")
+                        .HasForeignKey("OrdersOrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

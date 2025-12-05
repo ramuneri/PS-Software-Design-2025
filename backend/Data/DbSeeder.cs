@@ -131,6 +131,7 @@ namespace backend.Data
                 Name = "Test Service",
                 DefaultPrice = 19.99m,
                 DurationMinutes = 60,
+                Description = "This is a test service used for development purposes.",
                 IsActive = true
             };
 
