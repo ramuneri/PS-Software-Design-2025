@@ -48,3 +48,12 @@ slnx.sqlite
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Tests
+/Tests/**/bin/
+/Tests/**/obj/
+/Tests/**/*.user
+/Tests/**/*.suo
+/Tests/**/*.cache
+/Tests/**/TestResults/
+/Tests/**/Coverage*/
