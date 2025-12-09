@@ -1,11 +1,8 @@
-using backend.Controllers;
 using backend.Data;
 using backend.Data.Models;
 using backend.Dtos;
-using Microsoft.EntityFrameworkCore;
 using backend.Services.Interfaces;
-using Microsoft.AspNetCore.Mvc;
-
+using Microsoft.EntityFrameworkCore;
 
 namespace backend.Services;
 
@@ -17,6 +14,7 @@ public class DiscountService : IDiscountService
     {
         _db = db;
     }
+
 
     public async Task<DiscountDto> CreateAsync(CreateDiscountDto dto)
     {
@@ -31,14 +29,14 @@ public class DiscountService : IDiscountService
             Scope = dto.Scope,
             Type = dto.Type,
             Value = dto.Value,
-            StartsAt = dto.StartsAt,
-            EndsAt = dto.EndsAt,
+            StartsAt = dto.StartsAt?.ToUniversalTime(),
+            EndsAt = dto.EndsAt?.ToUniversalTime(),
+
             IsActive = true
         };
 
         _db.Discounts.Add(discount);
         await _db.SaveChangesAsync();
-
         return ToDto(discount);
     }
 
@@ -46,20 +44,17 @@ public class DiscountService : IDiscountService
     public async Task<IEnumerable<DiscountDto>> GetAllAsync(bool includeInactive = false)
     {
         var query = _db.Discounts.AsQueryable();
-
         if (!includeInactive)
-            query = query.Where(discount => discount.IsActive);
-
+            query = query.Where(d => d.IsActive);
         return await query
-            .Select(discount => ToDto(discount))
-            .ToListAsync();
+        .Select(discount => ToDto(discount))
+        .ToListAsync();
     }
 
 
     public async Task<DiscountDto?> GetByIdAsync(int id)
     {
         var discount = await _db.Discounts.FindAsync(id);
-
         if (discount == null || !discount.IsActive)
             return null;
 
@@ -83,17 +78,16 @@ public class DiscountService : IDiscountService
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var discount = await _db.Discounts.FindAsync(id);
-        if (discount == null)
+        var d = await _db.Discounts.FindAsync(id);
+        if (d == null)
             return false;
 
-        discount.IsActive = false;
+        d.IsActive = false;
         await _db.SaveChangesAsync();
-
         return true;
     }
 
-
+ 
     public async Task<bool> RestoreAsync(int id)
     {
         var discount = await _db.Discounts.FindAsync(id);
@@ -102,10 +96,8 @@ public class DiscountService : IDiscountService
 
         discount.IsActive = true;
         await _db.SaveChangesAsync();
-
         return true;
     }
-
 
     private void ValidateCreate(CreateDiscountDto dto)
     {
@@ -137,9 +129,15 @@ public class DiscountService : IDiscountService
         if (dto.Scope != null) discount.Scope = dto.Scope;
         if (dto.Type != null) discount.Type = dto.Type;
         if (dto.Value != null) discount.Value = dto.Value;
-        if (dto.StartsAt != null) discount.StartsAt = dto.StartsAt;
-        if (dto.EndsAt != null) discount.EndsAt = dto.EndsAt;
-        if (dto.IsActive != null) discount.IsActive = dto.IsActive.Value;
+
+        if (dto.StartsAt != null)
+            discount.StartsAt = dto.StartsAt.Value.ToUniversalTime();
+
+        if (dto.EndsAt != null)
+            discount.EndsAt = dto.EndsAt.Value.ToUniversalTime();
+
+        if (dto.IsActive != null)
+            discount.IsActive = dto.IsActive.Value;
     }
 
     private static DiscountDto ToDto(Discount discount) =>
