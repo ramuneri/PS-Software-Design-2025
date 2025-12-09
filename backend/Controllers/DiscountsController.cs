@@ -40,8 +40,10 @@ public class DiscountsController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(ex.Message);
+            Console.WriteLine(ex.ToString());
+            return BadRequest(ex.ToString());
         }
+
     }
 
     [Authorize]
