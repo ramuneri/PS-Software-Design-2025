@@ -19,11 +19,13 @@ public record CreateOrderRequest(
 [Route("[controller]")]
 public class OrdersController(IOrderService orderService) : ControllerBase
 {
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<OrderDto>>> GetOrders()
+        => Ok(await orderService.GetOrders());
+
     [HttpGet("{id}", Name = "GetOrder")]
     public async Task<ActionResult<OrderDto>> GetOrder(int id)
-    {
-        throw new NotImplementedException();
-    }
+        => Ok(await orderService.GetOrder(id));
 
     [HttpPost]
     public async Task<ActionResult<OrderDto?>> CreateOrder([FromBody] CreateOrderRequest request)
