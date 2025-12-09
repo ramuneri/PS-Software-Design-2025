@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace backend.Controllers;
 
 public record CreateOrderRequest(
-    string CustomerId,
+    string CustomerIdentifier,
     string EmployeeId,
     IEnumerable<OrderItemDto> Items,
     string Note
@@ -28,7 +28,7 @@ public class OrdersController(IOrderService orderService) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<OrderDto?>> CreateOrder([FromBody] CreateOrderRequest request)
     {
-        var newOrder = await orderService.CreateOrder(request.CustomerId, request.EmployeeId, request.Items, request.Note);
+        var newOrder = await orderService.CreateOrder(request.CustomerIdentifier, request.EmployeeId, request.Items, request.Note);
 
         if (newOrder == null) return BadRequest();
 

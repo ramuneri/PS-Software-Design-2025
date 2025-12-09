@@ -18,7 +18,7 @@ public class OrderService : IOrderService
         this.productService = productService;
     }
 
-    public async Task<OrderDto?> CreateOrder(string customerId, string employeeId, IEnumerable<OrderItemDto> orderItems, string note)
+    public async Task<OrderDto?> CreateOrder(string customerIdentifier, string employeeId, IEnumerable<OrderItemDto> orderItems, string note)
     {
         orderItems = orderItems.ToList();
 
@@ -26,7 +26,7 @@ public class OrderService : IOrderService
         {
             MerchantId = 1,
             EmployeeId = employeeId,
-            CustomerId = customerId,
+            CustomerIdentifier = customerIdentifier,
             Note = note,
             OpenedAt = DateTime.UtcNow
         };
@@ -69,7 +69,7 @@ public class OrderService : IOrderService
         return new OrderDto(
             order.Id,
             order.EmployeeId,
-            order.CustomerId,
+            order.CustomerIdentifier,
             orderItemDtos,
             null,
             subTotal,

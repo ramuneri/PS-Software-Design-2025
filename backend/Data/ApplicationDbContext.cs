@@ -56,13 +56,6 @@ namespace backend.Data
                 .HasForeignKey(o => o.EmployeeId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Configure User (Customer) -> Order relationship
-            builder.Entity<Order>()
-                .HasOne(o => o.Customer)
-                .WithMany(u => u.CustomerOrders)
-                .HasForeignKey(o => o.CustomerId)
-                .OnDelete(DeleteBehavior.Restrict);
-
             // Configure User (Employee) -> Reservation relationship
             builder.Entity<Reservation>()
                 .HasOne(r => r.Employee)
@@ -309,9 +302,6 @@ namespace backend.Data
 
             builder.Entity<Order>()
                 .HasIndex(o => o.EmployeeId);
-
-            builder.Entity<Order>()
-                .HasIndex(o => o.CustomerId);
 
             builder.Entity<Order>()
                 .HasIndex(o => o.OpenedAt);
