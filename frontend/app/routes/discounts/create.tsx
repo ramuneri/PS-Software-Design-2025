@@ -21,22 +21,16 @@ export default function DiscountCreate() {
     endsAt: "",
   });
 
-  /***************************************************
-   * LOAD PRODUCTS + SERVICES
-   ***************************************************/
   useEffect(() => {
     async function load() {
-      // Fetch products (raw array)
       const prodRes = await apiFetch(`${import.meta.env.VITE_API_URL}/api/products`);
       const prodJson = await prodRes.json();
       setProducts(Array.isArray(prodJson) ? prodJson : []);
 
-      // Fetch services (wrapped { data: [] })
       const serviceRes = await apiFetch(`${import.meta.env.VITE_API_URL}/api/services`);
       const serviceJson = await serviceRes.json();
       setServices(Array.isArray(serviceJson.data) ? serviceJson.data : []);
 
-      // Default target: first available product or service
       if (Array.isArray(prodJson) && prodJson.length > 0) {
         setTarget(`product-${prodJson[0].id}`);
         setForm(f => ({ ...f, productId: prodJson[0].id }));
@@ -48,9 +42,7 @@ export default function DiscountCreate() {
     load();
   }, []);
 
-  /***************************************************
-   * HANDLE TARGET CHANGE (product or service)
-   ***************************************************/
+
   useEffect(() => {
     if (!target) return;
 
@@ -64,9 +56,7 @@ export default function DiscountCreate() {
     }
   }, [target]);
 
-  /***************************************************
-   * HANDLE SUBMIT
-   ***************************************************/
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -84,9 +74,7 @@ export default function DiscountCreate() {
     navigate("/discounts");
   };
 
-  /***************************************************
-   * RENDER UI
-   ***************************************************/
+
   return (
     <div className="min-h-screen bg-gray-200 p-6 flex justify-center">
       <div className="w-[90%] max-w-3xl space-y-6">
