@@ -10,6 +10,8 @@ export default function ServicesPage() {
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);
 
+
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -17,10 +19,9 @@ export default function ServicesPage() {
       const res = await apiFetch(
         `${import.meta.env.VITE_API_URL}/api/services?active=${!showInactive}`
       );
-
       const json = await res.json();
 
-      // FIX: Extract the array from json.data
+
       setServices(Array.isArray(json.data) ? json.data : []);
 
       setLoading(false);
@@ -28,7 +29,6 @@ export default function ServicesPage() {
 
     load();
   }, [showInactive]);
-
 
 
   const filtered = services.filter((s) =>

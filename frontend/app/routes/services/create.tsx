@@ -38,6 +38,7 @@ export default function ServiceCreate() {
     await apiFetch(`${import.meta.env.VITE_API_URL}/api/services`, {
       method: "POST",
       body: JSON.stringify(form),
+      headers: { "Content-Type": "application/json" }
     });
 
     navigate("/services");
