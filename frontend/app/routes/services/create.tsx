@@ -12,7 +12,7 @@ export default function ServiceCreate() {
     defaultPrice: 0,
     durationMinutes: 0,
     taxCategoryId: null as number | null,
-    isActive: true, // always true when creating
+    isActive: true,
   });
 
   useEffect(() => {

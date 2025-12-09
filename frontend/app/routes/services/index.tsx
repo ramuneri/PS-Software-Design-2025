@@ -17,14 +17,19 @@ export default function ServicesPage() {
       const res = await apiFetch(
         `${import.meta.env.VITE_API_URL}/api/services?active=${!showInactive}`
       );
+
       const json = await res.json();
 
-      setServices(Array.isArray(json) ? json : []);
+      // FIX: Extract the array from json.data
+      setServices(Array.isArray(json.data) ? json.data : []);
+
       setLoading(false);
     }
 
     load();
   }, [showInactive]);
+
+
 
   const filtered = services.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase())
@@ -117,18 +122,41 @@ export default function ServicesPage() {
                   Edit
                 </button>
 
-                <button
-                  onClick={async () => {
-                    await apiFetch(
-                      `${import.meta.env.VITE_API_URL}/api/services/${service.serviceId}`,
-                      { method: "DELETE" }
-                    );
-                    location.reload();
-                  }}
-                  className="bg-red-400 hover:bg-red-500 text-white px-3 py-1 rounded"
-                >
-                  Delete
-                </button>
+
+
+                <div className="flex justify-end gap-2 pr-2">
+                  {service.isActive ? (
+                    // DELETE BUTTON
+                    <button
+                      onClick={async () => {
+                        await apiFetch(
+                          `${import.meta.env.VITE_API_URL}/api/services/${service.serviceId}`,
+                          { method: "DELETE" }
+                        );
+                        location.reload();
+                      }}
+                      className="bg-red-400 hover:bg-red-500 text-white px-3 py-1 rounded"
+                    >
+                      Delete
+                    </button>
+                  ) : (
+                    // RESTORE BUTTON
+                    <button
+                      onClick={async () => {
+                        await apiFetch(
+                          `${import.meta.env.VITE_API_URL}/api/services/${service.serviceId}/restore`,
+                          { method: "POST" }
+                        );
+                        location.reload();
+                      }}
+                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+                    >
+                      Restore
+                    </button>
+                  )}
+                </div>
+
+
               </div>
             </div>
           ))}
