@@ -1,8 +1,8 @@
+
 import { useState } from "react";
 import {useNavigate} from "react-router";
 
 type OrderItem = {
-    id: string;
     productId: number;
     itemName: string;
     quantity: number;
@@ -10,7 +10,7 @@ type OrderItem = {
 };
 
 type Product = {
-    productId: number;
+    id: number;
     name: string;
     price: number | null;
     category: string | null;
@@ -42,6 +42,7 @@ export default function CreateOrderPage() {
             if (!res.ok) throw new Error(`Failed to load products (${res.status})`);
 
             const data = await res.json();
+            console.log("Products from API:", data); // DEBUG
             setProducts(data);
         } catch (err: any) {
             setError(err.message ?? "Unknown error");
@@ -63,7 +64,7 @@ export default function CreateOrderPage() {
             const token = localStorage.getItem("access-token");
 
             const orderData = {
-                customerId: "e276b3a7-882b-4242-9324-48bd22f5edbd", // TODO,
+                customerIdentifier: customer,
                 employeeId: "e276b3a7-882b-4242-9324-48bd22f5edbd", // TODO
                 items: items.map(item => ({
                     productId: item.productId,
@@ -72,7 +73,9 @@ export default function CreateOrderPage() {
                 note: ""
             };
 
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/Orders`, {
+            console.log("Sending order data:", orderData); // DEBUG
+
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/orders`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -82,12 +85,15 @@ export default function CreateOrderPage() {
             });
 
             if (!res.ok) {
+                const errorText = await res.text();
+                console.error("Error response:", errorText);
                 throw new Error(`Failed to create order (${res.status})`);
             }
 
             const createdOrder = await res.json();
+            console.log("Created order:", createdOrder);
 
-            // Navigate back to home or show success message
+            // Navigate back to home
             navigate("/");
         } catch (err: any) {
             setError(err.message ?? "Failed to create order");
@@ -101,14 +107,14 @@ export default function CreateOrderPage() {
         await loadProducts();
     };
 
-    const handleDeleteItem = (id: string) => {
-        const item = items.find((item) => item.id === id);
+    const handleDeleteItem = (productId: number) => {
+        const item = items.find((item) => item.productId === productId);
         if (item && item.quantity === 1) {
-            setItems(items.filter((item) => item.id !== id));
+            setItems(items.filter((item) => item.productId !== productId));
         } else if (item) {
             setItems(
                 items.map((i) =>
-                    i.id === id ? { ...i, quantity: i.quantity - 1 } : i
+                    i.productId === productId ? { ...i, quantity: i.quantity - 1, totalPrice: (i.quantity - 1) * (i.totalPrice / i.quantity) } : i
                 )
             );
         }
@@ -117,14 +123,14 @@ export default function CreateOrderPage() {
     const handleSelectProduct = (product: Product) => {
         // Check if item already exists
         const existingItem = items.find(
-            (item) => item.productId === product.productId
+            (item) => item.productId === product.id
         );
 
         if (existingItem) {
             // Increment quantity
             setItems(
                 items.map((item) =>
-                    item.productId === product.productId
+                    item.productId === product.id
                         ? {
                             ...item,
                             quantity: item.quantity + 1,
@@ -135,14 +141,10 @@ export default function CreateOrderPage() {
             );
         } else {
             // Add new item
-            const newId = (
-                Math.max(...items.map((i) => parseInt(i.id)), 0) + 1
-            ).toString();
             setItems([
                 ...items,
                 {
-                    id: newId,
-                    productId: product.productId,
+                    productId: product.id,
                     itemName: product.name,
                     quantity: 1,
                     totalPrice: product.price || 0,
@@ -152,7 +154,7 @@ export default function CreateOrderPage() {
     };
 
     const calculateTotal = () => {
-        return items.reduce((sum, item) => sum + item.totalPrice, 0);
+        return items.reduce((sum, item) => sum + item.totalPrice, 0).toFixed(2);
     };
 
     return (
@@ -163,6 +165,13 @@ export default function CreateOrderPage() {
                     <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
                         Create Order
                     </div>
+
+                    {/* Error Display */}
+                    {error && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                            {error}
+                        </div>
+                    )}
 
                     {/* Content Grid - Left side details/inventory, Right side items */}
                     <div className="grid grid-cols-2 gap-6 flex-1">
@@ -176,14 +185,14 @@ export default function CreateOrderPage() {
                                         value={customer}
                                         onChange={(e) => setCustomer(e.target.value)}
                                         className="w-full bg-gray-400 rounded-md px-4 py-3 text-black focus:outline-none"
-                                        placeholder=""
+                                        placeholder="Table 1"
                                     />
                                 </div>
 
                                 <div className="space-y-4">
                                     <label className="block text-black font-medium">Total</label>
                                     <div className="bg-gray-400 rounded-md px-4 py-3 text-white">
-                                        {calculateTotal()}$
+                                        ${calculateTotal()}
                                     </div>
                                 </div>
                             </div>
@@ -219,14 +228,14 @@ export default function CreateOrderPage() {
 
                                     {!loading && !error && products.map((product) => (
                                         <div
-                                            key={product.productId}
+                                            key={product.id}
                                             className="grid grid-cols-12 gap-2 bg-gray-400 px-2 py-2 rounded-md items-center text-sm"
                                         >
-                                            <span className="col-span-2 text-black">{product.productId}</span>
+                                            <span className="col-span-2 text-black">{product.id}</span>
                                             <span className="col-span-4 text-black">{product.name}</span>
                                             <span className="col-span-2 text-black text-center">-</span>
                                             <span className="col-span-3 text-black text-center">
-                                                {product.price != null ? `${product.price}$` : "-"}
+                                                {product.price != null ? `$${product.price}` : "-"}
                                             </span>
                                             <button
                                                 onClick={() => handleSelectProduct(product)}
@@ -265,16 +274,21 @@ export default function CreateOrderPage() {
 
                             {/* Table Rows - Scrollable */}
                             <div className="space-y-3 overflow-y-auto flex-1">
+                                {items.length === 0 && (
+                                    <div className="text-center text-gray-500 py-8">
+                                        No items added yet
+                                    </div>
+                                )}
                                 {items.map((item) => (
                                     <div
-                                        key={item.id}
+                                        key={item.productId}
                                         className="grid grid-cols-12 gap-3 bg-gray-300 px-4 py-3 rounded-md items-center"
                                     >
                                         <span className="col-span-4 text-black">{item.itemName}</span>
                                         <span className="col-span-3 text-black text-center">{item.quantity}</span>
-                                        <span className="col-span-3 text-black text-center">{item.totalPrice}$</span>
+                                        <span className="col-span-3 text-black text-center">${item.totalPrice.toFixed(2)}</span>
                                         <button
-                                            onClick={() => handleDeleteItem(item.id)}
+                                            onClick={() => handleDeleteItem(item.productId)}
                                             className="col-span-2 flex justify-center hover:opacity-70"
                                         >
                                             <svg
@@ -296,14 +310,16 @@ export default function CreateOrderPage() {
                         {/* Left buttons */}
                         <div className="flex gap-6">
                             <button
-                                className="flex-1 bg-gray-300 hover:bg-gray-400 rounded-md py-3 text-black font-medium"
+                                className="flex-1 bg-gray-300 hover:bg-gray-400 rounded-md py-3 text-black font-medium disabled:opacity-50"
                                 onClick={handleCreate}
+                                disabled={loading || items.length === 0}
                             >
-                                Create
+                                {loading ? "Creating..." : "Create"}
                             </button>
                             <button
                                 className="flex-1 bg-gray-300 hover:bg-gray-400 rounded-md py-3 text-black font-medium"
                                 onClick={() => navigate("/")}
+                                disabled={loading}
                             >
                                 Cancel
                             </button>
@@ -314,6 +330,7 @@ export default function CreateOrderPage() {
                             <button
                                 onClick={handleAddItem}
                                 className="w-full bg-gray-300 hover:bg-gray-400 rounded-md py-3 text-black font-medium"
+                                disabled={loading}
                             >
                                 Add item
                             </button>

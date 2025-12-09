@@ -11,11 +11,10 @@ public class Order
     public int MerchantId { get; set; }
     
     public string? EmployeeId { get; set; }
-    public string? CustomerId { get; set; }
+    public string? CustomerIdentifier { get; set; }
     public int? BusinessPricingPolicyId { get; set; }
     public int? TipBasedOnDiscountId { get; set; }
     public User? Employee { get; set; }
-    public User? Customer { get; set; }
     public DateTime OpenedAt { get; set; }
     public DateTime? ClosedAt { get; set; }
     public DateTime? CancelledAt { get; set; }

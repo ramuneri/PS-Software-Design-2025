@@ -4,6 +4,7 @@ using backend.Dtos;
 using backend.Enums;
 using backend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace backend.Services.Implementations;
 
@@ -18,7 +19,117 @@ public class OrderService : IOrderService
         this.productService = productService;
     }
 
-    public async Task<OrderDto?> CreateOrder(string customerId, string employeeId, IEnumerable<OrderItemDto> orderItems, string note)
+    public async Task<IEnumerable<OrderDto>> GetOrders()
+    {
+        var orders = await context.Orders
+            .Include(o => o.OrderItems)
+            .ToListAsync();
+
+        var orderDtos = new List<OrderDto>();
+
+        foreach (var order in orders)
+        {
+            decimal subTotal = 0;
+            var orderItemDtos = new List<OrderItemDto>();
+
+            foreach (var orderItem in order.OrderItems)
+            {
+                var product = await productService.GetByIdAsync(orderItem.ProductId!.Value);
+
+                if (product != null)
+                {
+                    var itemTotal = product.Price * orderItem.Quantity;
+                    subTotal += itemTotal ?? 0;
+
+                    orderItemDtos.Add(new OrderItemDto(
+                        orderItem.Id,
+                        orderItem.OrderId,
+                        orderItem.ProductId ?? 0,
+                        orderItem.Quantity,
+                        itemTotal ?? 0
+                    ));
+                }
+            }
+            
+            var status = order.CancelledAt is not null ? Status.Cancelled :
+                order.ClosedAt is not null ? Status.Closed :
+                Status.Open;
+            
+            orderDtos.Add(new OrderDto(
+                order.Id,
+                order.EmployeeId,
+                order.CustomerIdentifier,
+                orderItemDtos,
+                null,
+                subTotal,
+                0, // TODO: calculate tax
+                subTotal, // TODO: subTotal + tax
+                order.Note,
+                status,
+                order.OpenedAt,
+                order.ClosedAt,
+                order.CancelledAt
+            ));
+        }
+
+        return orderDtos;
+    }
+
+    public async Task<OrderDto?> GetOrder(int id)
+    {
+        var order = await context.Orders
+            .Include(o => o.OrderItems)
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order == null)
+        {
+            return null;
+        }
+
+        decimal subTotal = 0;
+        var orderItemDtos = new List<OrderItemDto>();
+
+        foreach (var orderItem in order.OrderItems)
+        {
+            var product = await productService.GetByIdAsync(orderItem.ProductId!.Value);
+
+            if (product != null)
+            {
+                var itemTotal = product.Price * orderItem.Quantity;
+                subTotal += itemTotal ?? 0;
+
+                orderItemDtos.Add(new OrderItemDto(
+                    orderItem.Id,
+                    orderItem.OrderId,
+                    orderItem.ProductId ?? 0,
+                    orderItem.Quantity,
+                    itemTotal ?? 0
+                ));
+            }
+        }
+    
+        var status = order.CancelledAt is not null ? Status.Cancelled :
+            order.ClosedAt is not null ? Status.Closed :
+            Status.Open;
+    
+        return new OrderDto(
+            order.Id,
+            order.EmployeeId,
+            order.CustomerIdentifier,
+            orderItemDtos,
+            null,
+            subTotal,
+            0, // TODO: calculate tax
+            subTotal, // TODO: subTotal + tax
+            order.Note,
+            status,
+            order.OpenedAt,
+            order.ClosedAt,
+            order.CancelledAt
+        );
+    }
+
+    public async Task<OrderDto?> CreateOrder(string customerIdentifier, string employeeId, IEnumerable<OrderItemDto> orderItems, string note)
     {
         orderItems = orderItems.ToList();
 
@@ -26,7 +137,7 @@ public class OrderService : IOrderService
         {
             MerchantId = 1,
             EmployeeId = employeeId,
-            CustomerId = customerId,
+            CustomerIdentifier = customerIdentifier,
             Note = note,
             OpenedAt = DateTime.UtcNow
         };
@@ -69,7 +180,7 @@ public class OrderService : IOrderService
         return new OrderDto(
             order.Id,
             order.EmployeeId,
-            order.CustomerId,
+            order.CustomerIdentifier,
             orderItemDtos,
             null,
             subTotal,
