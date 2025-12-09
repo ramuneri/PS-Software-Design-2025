@@ -70,7 +70,7 @@ export default function ServicesPage() {
             <div className="flex items-center bg-gray-200 border border-gray-400 rounded-md w-full max-w-3xl px-4 py-3">
               <input
                 type="text"
-                className="flex-grow bg-transparent focus:outline-none text-black"
+                className="grow bg-transparent focus:outline-none text-black"
                 placeholder="Search for specific item"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -109,13 +109,14 @@ export default function ServicesPage() {
                   : `${service.durationMinutes}min`}
               </span>
 
-              <span>{service.defaultPrice}</span>
+              <span>{service.defssaultPrice}</span>
 
               {/* ACTION BUTTONS */}
               <div className="flex justify-end gap-2 pr-2">
                 <button
                   onClick={() =>
-                    navigate(`/services/edit/${service.serviceId}`)
+                    navigate(`services/${service.serviceId}/edit`)
+
                   }
                   className="bg-blue-400 hover:bg-blue-500 text-white px-3 py-1 rounded"
                 >
