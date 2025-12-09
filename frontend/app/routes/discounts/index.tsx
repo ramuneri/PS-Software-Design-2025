@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 type Discount = {
   id: number;
@@ -14,14 +15,14 @@ type Discount = {
   isActive: boolean;
 };
 
-
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem("access-token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-
 export default function DiscountsPage() {
+  const navigate = useNavigate();
+
   const [discounts, setDiscounts] = useState<Discount[]>([]);
   const [loading, setLoading] = useState(true);
   const [includeInactive, setIncludeInactive] = useState(false);
@@ -51,7 +52,6 @@ export default function DiscountsPage() {
     loadDiscounts();
   }, [includeInactive]);
 
-
   const deleteDiscount = async (id: number) => {
     await fetch(`${import.meta.env.VITE_API_URL}/api/discounts/${id}`, {
       method: "DELETE",
@@ -59,7 +59,6 @@ export default function DiscountsPage() {
     });
     loadDiscounts();
   };
-
 
   const restoreDiscount = async (id: number) => {
     await fetch(`${import.meta.env.VITE_API_URL}/api/discounts/${id}/restore`, {
@@ -69,7 +68,6 @@ export default function DiscountsPage() {
     loadDiscounts();
   };
 
-
   if (loading) {
     return <div className="p-6 text-black">Loading discounts…</div>;
   }
@@ -78,10 +76,12 @@ export default function DiscountsPage() {
     <div className="min-h-screen bg-gray-200 p-6 flex justify-center">
       <div className="w-[90%] mx-auto space-y-6">
 
+        {/* HEADER */}
         <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
           Discount List
         </div>
 
+        {/* Show inactive checkbox */}
         <div className="flex items-center gap-3">
           <input
             type="checkbox"
@@ -91,6 +91,7 @@ export default function DiscountsPage() {
           <span className="text-black">Show inactive</span>
         </div>
 
+        {/* TABLE HEADERS */}
         <div className="grid grid-cols-8 px-4 text-sm font-medium text-black">
           <span>Name</span>
           <span>Code</span>
@@ -102,6 +103,7 @@ export default function DiscountsPage() {
           <span className="text-right">Actions</span>
         </div>
 
+        {/* DISCOUNT LIST */}
         <div className="space-y-3">
           {discounts.map((discount) => (
             <div
@@ -132,12 +134,11 @@ export default function DiscountsPage() {
                   : "-"}
               </span>
 
+              {/* ACTION BUTTONS */}
               <div className="flex gap-2 justify-end">
                 <button
-                  className="px-3 py-1 bg-blue-400 hover:bg-blue-500 text-black rounded"
-                  onClick={() => {
-                    /* TODO: navigate to edit page */
-                  }}
+                  onClick={() => navigate(`/discounts/${discount.id}/edit`)}
+                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
                 >
                   Edit
                 </button>
@@ -164,8 +165,11 @@ export default function DiscountsPage() {
 
         {/* CREATE BUTTON */}
         <div className="pt-6">
-          <button className="w-48 bg-gray-400 hover:bg-gray-500 rounded-md py-2 text-black">
-            Create Discount
+          <button
+            onClick={() => navigate("/discounts/create")}
+            className="w-48 bg-gray-400 hover:bg-gray-500 rounded-md py-2 text-black"
+          >
+            Create
           </button>
         </div>
       </div>
