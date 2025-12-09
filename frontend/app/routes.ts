@@ -7,12 +7,13 @@ export default [
     route("products", "routes/products.tsx"),
 
     route("orders/create", "routes/createOrder.tsx"),
+    route("orders/view", "routes/ordersList.tsx"),
+    route("orders/view/:id", "routes/viewOrder.tsx"),
 
-    // Discounts routes
     route("discounts", "routes/discounts/index.tsx"),
     route("discounts/create", "routes/discounts/create.tsx"),
     route("discounts/:id/edit", "routes/discounts/edit.tsx"),
-
+    
     route("example", "routes/example.tsx"),
     route("debug", "routes/debug.tsx"),
   ]),
