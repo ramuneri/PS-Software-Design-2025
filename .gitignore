@@ -29,6 +29,11 @@
 /backend/.vs/                 # Visual Studio workspace
 /backend/.idea/               # if using IntelliJ Rider/IDEA
 
+# .NET / Tests
+/tests/**/bin/
+/tests/**/obj/
+/TestResults/
+
 # Docker
 frontend/.dockerignore
 backend/.dockerignore
