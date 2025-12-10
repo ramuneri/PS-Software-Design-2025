@@ -109,56 +109,56 @@ export default function ServicesPage() {
                   : `${service.durationMinutes}min`}
               </span>
 
-              <span>{service.defssaultPrice}</span>
+              <span>{service.defaultPrice}</span>
 
               {/* ACTION BUTTONS */}
-              <div className="flex justify-end gap-2 pr-2">
-                <button
-                  onClick={() =>
-                    navigate(`services/${service.serviceId}/edit`)
-
-                  }
-                  className="bg-blue-400 hover:bg-blue-500 text-white px-3 py-1 rounded"
-                >
-                  Edit
-                </button>
 
 
 
-                <div className="flex justify-end gap-2 pr-2">
-                  {service.isActive ? (
-                    // DELETE BUTTON
-                    <button
-                      onClick={async () => {
-                        await apiFetch(
-                          `${import.meta.env.VITE_API_URL}/api/services/${service.serviceId}`,
-                          { method: "DELETE" }
-                        );
-                        location.reload();
-                      }}
-                      className="bg-red-400 hover:bg-red-500 text-white px-3 py-1 rounded"
-                    >
-                      Delete
-                    </button>
-                  ) : (
-                    // RESTORE BUTTON
-                    <button
-                      onClick={async () => {
-                        await apiFetch(
-                          `${import.meta.env.VITE_API_URL}/api/services/${service.serviceId}/restore`,
-                          { method: "POST" }
-                        );
-                        location.reload();
-                      }}
-                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
-                    >
-                      Restore
-                    </button>
-                  )}
-                </div>
+<div className="flex justify-end gap-2 pr-2">
+  <button
+    onClick={() => {
+      console.log("NAV:", `/services/${service.serviceId}/edit`);
+      navigate(`/services/${service.serviceId}/edit`);
+    }}
+    className="bg-blue-400 hover:bg-blue-500 text-white px-3 py-1 rounded"
+  >
+    Edit
+  </button>
+
+  {service.isActive ? (
+    <button
+      onClick={async () => {
+        await apiFetch(`${import.meta.env.VITE_API_URL}/api/services/${service.serviceId}`, {
+          method: "DELETE",
+        });
+        location.reload();
+      }}
+      className="bg-red-400 hover:bg-red-500 text-white px-3 py-1 rounded"
+    >
+      Delete
+    </button>
+  ) : (
+    <button
+      onClick={async () => {
+        await apiFetch(
+          `${import.meta.env.VITE_API_URL}/api/services/${service.serviceId}/restore`,
+          { method: "POST" }
+        );
+        location.reload();
+      }}
+      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+    >
+      Restore
+    </button>
+  )}
+</div>
 
 
-              </div>
+
+
+
+              
             </div>
           ))}
         </div>

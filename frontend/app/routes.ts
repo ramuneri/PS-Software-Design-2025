@@ -18,6 +18,7 @@ export default [
     route("services/create", "routes/services/create.tsx"),
     route("services/:id/edit", "routes/services/edit.tsx"),
 
+
     
     route("example", "routes/example.tsx"),
     route("debug", "routes/debug.tsx"),

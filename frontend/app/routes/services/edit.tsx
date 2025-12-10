@@ -30,13 +30,13 @@ export default function ServiceEdit() {
 
         setForm(json.data);
 
-        // Load tax categories
-        const taxRes = await apiFetch(
-          `${import.meta.env.VITE_API_URL}/api/tax-categories`
-        );
-        const taxJson = await taxRes.json();
+        // TODO when implemented (Load tax categories)
+        // const taxRes = await apiFetch(
+        //   `${import.meta.env.VITE_API_URL}/api/tax-categories`
+        // );
+        // const taxJson = await taxRes.json();
 
-        setTaxCategories(Array.isArray(taxJson.data) ? taxJson.data : []);
+        // setTaxCategories(Array.isArray(taxJson.data) ? taxJson.data : []);
 
         setLoading(false);
       } catch (error) {
@@ -133,8 +133,8 @@ export default function ServiceEdit() {
             />
           </div>
 
-          {/* TAX CATEGORY */}
-          <div>
+          {/* TODO TAX CATEGORY */}
+          {/* <div>
             <label className="block mb-1 text-sm">Tax Category</label>
             <select
               className="bg-gray-200 p-2 rounded w-full"
@@ -156,7 +156,7 @@ export default function ServiceEdit() {
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
 
           {/* ACTIVE STATUS */}
           <div>
