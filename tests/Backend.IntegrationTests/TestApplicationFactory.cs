@@ -77,8 +77,20 @@ public class TestApplicationFactory : WebApplicationFactory<Program>
             MerchantId = 1,
             Name = "Test Merchant"
         };
-
         db.Merchants.Add(merchant);
+
+        var user = new User
+        {
+            Id = "test-user-id",
+            UserName = "TestUser",
+            Email = "test@example.com",
+            MerchantId = merchant.MerchantId,
+            Role = "admin",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            LastLoginAt = DateTime.UtcNow
+        };
+        db.Users.Add(user);
 
         db.Products.Add(new Product
         {
@@ -87,6 +99,17 @@ public class TestApplicationFactory : WebApplicationFactory<Program>
             Name = "Test Product",
             Price = 10.99m,
             Category = "Test",
+            IsActive = true
+        });
+
+        db.Services.Add(new Service
+        {
+            ServiceId = 1,
+            MerchantId = merchant.MerchantId,
+            Name = "Test Service",
+            Description = "Initial test service",
+            DefaultPrice = 49.99m,
+            DurationMinutes = 60,
             IsActive = true
         });
 
