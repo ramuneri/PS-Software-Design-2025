@@ -10,9 +10,7 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);
 
-  // ---------------------------
-  // LOAD PRODUCTS
-  // ---------------------------
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -23,18 +21,13 @@ export default function ProductsPage() {
 
       const json = await res.json();
 
-      // In services you use json.data, but your products return array directly
       setProducts(Array.isArray(json) ? json : json.data ?? []);
-
       setLoading(false);
     }
 
     load();
   }, [showInactive]);
 
-  // ---------------------------
-  // FILTERING
-  // ---------------------------
   const filtered = products.filter((p) =>
     p.name?.toLowerCase().includes(search.toLowerCase())
   );
@@ -125,7 +118,6 @@ export default function ProductsPage() {
 
                 {/* DELETE OR RESTORE */}
                 {product.isActive ? (
-                  /* DELETE BUTTON */
                   <button
                     onClick={async () => {
                       await apiFetch(
@@ -139,7 +131,6 @@ export default function ProductsPage() {
                     Delete
                   </button>
                 ) : (
-                  /* RESTORE BUTTON */
                   <button
                     onClick={async () => {
                       await apiFetch(
