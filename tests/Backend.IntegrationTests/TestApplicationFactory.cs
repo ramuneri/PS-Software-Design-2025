@@ -72,10 +72,18 @@ public class TestApplicationFactory : WebApplicationFactory<Program>
 
     private void SeedTestData(ApplicationDbContext db)
     {
+        var merchant = new Merchant
+        {
+            MerchantId = 1,
+            Name = "Test Merchant"
+        };
+
+        db.Merchants.Add(merchant);
+
         db.Products.Add(new Product
         {
             ProductId = 1,
-            MerchantId = 1,
+            MerchantId = merchant.MerchantId,
             Name = "Test Product",
             Price = 10.99m,
             Category = "Test",
@@ -84,6 +92,7 @@ public class TestApplicationFactory : WebApplicationFactory<Program>
 
         db.SaveChanges();
     }
+
 
     // Create client with default auth header
     public HttpClient CreateAuthenticatedClient()
