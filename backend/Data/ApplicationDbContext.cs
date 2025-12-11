@@ -11,6 +11,9 @@ namespace backend.Data
         public DbSet<Product> Products { get; set; }
         public DbSet<Service> Services { get; set; }
         public DbSet<ServiceChargePolicy> ServiceChargePolicies { get; set; }
+        public DbSet<OrderServiceChargePolicy> OrderServiceChargePolicies { get; set; }
+        public DbSet<ServiceServiceChargePolicy> ServiceServiceChargePolicies { get; set; }
+
         public DbSet<Discount> Discounts { get; set; }
         public DbSet<TaxCategories> TaxCategories { get; set; }
         public DbSet<TaxRate> TaxRates { get; set; }
@@ -255,6 +258,45 @@ namespace backend.Data
             builder.Entity<ServiceChargePolicy>()
                 .Property(scp => scp.Value)
                 .HasPrecision(18, 2);
+
+
+
+            // --------------------------------------------------------
+            
+            builder.Entity<OrderServiceChargePolicy>()
+                .HasKey(x => new { x.OrdersId, x.ServiceChargePoliciesId });
+
+            builder.Entity<OrderServiceChargePolicy>()
+                .HasOne(x => x.Order)
+                .WithMany(o => o.ServiceChargePolicies)
+                .HasForeignKey(x => x.OrdersId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<OrderServiceChargePolicy>()
+                .HasOne(x => x.Policy)
+                .WithMany(p => p.Orders)
+                .HasForeignKey(x => x.ServiceChargePoliciesId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // --------------------------------------------------------
+
+            builder.Entity<ServiceServiceChargePolicy>()
+                .HasKey(x => new { x.ServiceChargePoliciesId, x.ServicesServiceId });
+
+            builder.Entity<ServiceServiceChargePolicy>()
+                .HasOne(x => x.Service)
+                .WithMany(s => s.ServiceChargePolicies)
+                .HasForeignKey(x => x.ServicesServiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ServiceServiceChargePolicy>()
+                .HasOne(x => x.Policy)
+                .WithMany(p => p.Services)
+                .HasForeignKey(x => x.ServiceChargePoliciesId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // --------------------------------------------------------
+              
 
             builder.Entity<Discount>()
                 .Property(d => d.Value)

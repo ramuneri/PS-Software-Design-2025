@@ -6,10 +6,10 @@ public class Order
 {
     [Key]
     public int Id { get; set; }
-    
+
     [Required]
     public int MerchantId { get; set; }
-    
+
     public string? EmployeeId { get; set; }
     public string? CustomerIdentifier { get; set; }
     public int? BusinessPricingPolicyId { get; set; }
@@ -24,5 +24,7 @@ public class Order
     public ICollection<Payment>? Payments { get; set; } = new List<Payment>();
     public ICollection<Refund>? Refunds { get; set; } = new List<Refund>();
     public ICollection<OrderTip>? OrderTips { get; set; } = new List<OrderTip>();
-    public ICollection<ServiceChargePolicy>? ServiceChargePolicies { get; set; } = new List<ServiceChargePolicy>();
+    // public ICollection<ServiceChargePolicy>? ServiceChargePolicies { get; set; } = new List<ServiceChargePolicy>();
+    public ICollection<OrderServiceChargePolicy> ServiceChargePolicies { get; set; } = new List<OrderServiceChargePolicy>();
+
 }
