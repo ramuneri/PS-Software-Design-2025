@@ -25,7 +25,7 @@ export default function DiscountCreate() {
     async function load() {
       const prodRes = await apiFetch(`${import.meta.env.VITE_API_URL}/api/products`);
       const prodJson = await prodRes.json();
-      setProducts(Array.isArray(prodJson) ? prodJson : []);
+      setProducts(Array.isArray(prodJson.data) ? prodJson.data : []);
 
       const serviceRes = await apiFetch(`${import.meta.env.VITE_API_URL}/api/services`);
       const serviceJson = await serviceRes.json();
