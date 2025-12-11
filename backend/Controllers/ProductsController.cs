@@ -1,7 +1,7 @@
 using backend.Dtos;
-using Microsoft.AspNetCore.Mvc;
 using backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
 
@@ -16,10 +16,14 @@ public class ProductsController : ControllerBase
         _service = service;
     }
 
-
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ProductDto>>> GetAll()
-        => Ok(await _service.GetAllAsync());
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int? taxCategoryId,
+        [FromQuery] bool? active = true)
+    {
+        var data = await _service.GetAllAsync(taxCategoryId, active);
+        return Ok(new { data });
+    }
 
     [HttpGet("search")]
     public async Task<ActionResult<IEnumerable<ProductDto>>> Search([FromQuery] string q)
@@ -37,8 +41,7 @@ public class ProductsController : ControllerBase
         return result == null ? NotFound() : Ok(result);
     }
 
-
-
+    // POST /api/products
     [Authorize]
     [HttpPost]
     public async Task<ActionResult<ProductDto>> Create(CreateProductDto dto)
@@ -59,4 +62,9 @@ public class ProductsController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<ActionResult> Delete(int id)
         => await _service.DeleteAsync(id) ? NoContent() : NotFound();
+
+    [Authorize]
+    [HttpPost("{id:int}/restore")]
+    public async Task<ActionResult> Restore(int id)
+        => await _service.RestoreAsync(id) ? NoContent() : NotFound();
 }

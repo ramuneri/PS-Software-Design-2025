@@ -14,6 +14,8 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
                        ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
@@ -133,8 +135,13 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        var seeder = services.GetRequiredService<DbSeeder>();
-        await seeder.SeedAsync();
+        var context = services.GetRequiredService<ApplicationDbContext>();
+
+        if (context.Database.IsRelational())
+        {
+            var seeder = services.GetRequiredService<DbSeeder>();
+            await seeder.SeedAsync();
+        }
     }
     catch (Exception ex)
     {
@@ -148,8 +155,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-
-app.UseHttpsRedirection();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("AllowFrontend");
 
@@ -159,3 +168,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

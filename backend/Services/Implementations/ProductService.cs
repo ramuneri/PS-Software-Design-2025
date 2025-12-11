@@ -15,9 +15,17 @@ public class ProductService : IProductService
         _db = db;
     }
 
-    public async Task<IEnumerable<ProductDto>> GetAllAsync()
+    public async Task<IEnumerable<ProductDto>> GetAllAsync(int? taxCategoryId, bool? active)
     {
-        return await _db.Products
+        var query = _db.Products.AsQueryable();
+
+        if (taxCategoryId.HasValue)
+            query = query.Where(p => p.TaxCategoryId == taxCategoryId.Value);
+
+        if (active.HasValue)
+            query = query.Where(p => p.IsActive == active.Value);
+
+        return await query
             .Select(p => ToDto(p))
             .ToListAsync();
     }
@@ -34,13 +42,15 @@ public class ProductService : IProductService
 
     public async Task<ProductDto?> GetByIdAsync(int id)
     {
-        var product = await _db.Products.FindAsync(id);
-        return product == null ? null : ToDto(product);
+        var p = await _db.Products.FindAsync(id);
+        if (p == null) return null;
+
+        return ToDto(p);
     }
 
     public async Task<ProductDto> CreateAsync(CreateProductDto dto)
     {
-        int merchantId = 1; // TODO: replace with real merchant after auth
+        int merchantId = 1; // TODO — replace with actual merchant from auth
 
         var product = new Product
         {
@@ -80,7 +90,21 @@ public class ProductService : IProductService
         if (product == null)
             return false;
 
-        _db.Products.Remove(product);
+        // Soft delete
+        product.IsActive = false;
+
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> RestoreAsync(int id)
+    {
+        var product = await _db.Products.FindAsync(id);
+        if (product == null)
+            return false;
+
+        product.IsActive = true;
+
         await _db.SaveChangesAsync();
         return true;
     }

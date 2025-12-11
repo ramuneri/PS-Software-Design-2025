@@ -64,44 +64,56 @@ namespace backend.Data
             return merchant;
         }
 
+
         private async Task<User> SeedEmployeeUserAsync(Merchant merchant)
         {
             const string email = "test@temp.com";
             const string password = "test123";
 
-            var existing = await _userManager.FindByEmailAsync(email);
-            if (existing != null)
-                return existing;
+            var user = await _userManager.FindByEmailAsync(email);
 
-            var user = new User
+            if (user == null)
             {
-                UserName = email,
-                Email = email,
-                MerchantId = merchant.MerchantId,
-                Role = "Employee",
-                CreatedAt = DateTime.UtcNow,
-                LastLoginAt = DateTime.UtcNow
-            };
+                user = new User
+                {
+                    UserName = email,
+                    Email = email,
+                    MerchantId = merchant.MerchantId,
+                    Role = "Employee",
+                    CreatedAt = DateTime.UtcNow,
+                    LastLoginAt = DateTime.UtcNow
+                };
 
-            var result = await _userManager.CreateAsync(user, password);
+                var result = await _userManager.CreateAsync(user, password);
 
-            if (!result.Succeeded)
-            {
-                var errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
-                _logger.LogError("Failed to seed employee user: {Error}", errorMsg);
+                if (!result.Succeeded)
+                {
+                    var errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
+                    _logger.LogError("Failed to seed employee user: {Error}", errorMsg);
+                }
+                else
+                {
+                    _logger.LogInformation("Seeded Employee user {Email}", email);
+                }
             }
             else
             {
-                _logger.LogInformation("Seeded Employee user {Email}", email);
+                if (user.MerchantId != merchant.MerchantId)
+                {
+                    user.MerchantId = merchant.MerchantId;
+                    await _db.SaveChangesAsync();
+                    _logger.LogInformation("Updated test user to correct MerchantId");
+                }
             }
 
             return user;
         }
 
 
+
         private async Task SeedProductAsync(Merchant merchant)
         {
-            if (await _db.Products.AnyAsync(p => p.Name == "Test Product"))
+            if (await _db.Products.AnyAsync(p => p.Name == "Test Product")) // TODO maybe - like with service bellow (re-seed if deleted)
                 return;
 
             var product = new Product
@@ -122,8 +134,19 @@ namespace backend.Data
 
         private async Task SeedServiceAsync(Merchant merchant)
         {
-            if (await _db.Services.AnyAsync(s => s.Name == "Test Service"))
+            var existing = await _db.Services.FirstOrDefaultAsync(s => s.Name == "Test Service");
+            if (existing != null)
+            {
+                if (!existing.IsActive)
+                {
+                    existing.IsActive = true;
+                    await _db.SaveChangesAsync();
+                    _logger.LogInformation("Restored soft-deleted Test Service");
+                }
+
                 return;
+            }
+
 
             var service = new Service
             {
