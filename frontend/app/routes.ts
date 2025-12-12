@@ -20,7 +20,11 @@ export default [
     route("products", "routes/products/index.tsx"),
     route("products/create", "routes/products/create.tsx"),
     route("products/:id/edit", "routes/products/edit.tsx"),
-    
+
+    route("service-charge-policies", "routes/serviceChargePolicies/index.tsx"),
+    route("service-charge-policies/create", "routes/serviceChargePolicies/create.tsx"),
+    route("service-charge-policies/:id/edit", "routes/serviceChargePolicies/edit.tsx"),
+
     
     route("example", "routes/example.tsx"),
     route("debug", "routes/debug.tsx"),
