@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 
@@ -25,8 +26,10 @@ export default function ModifyOrderPage() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [note, setNote] = useState("");
     const [originalCustomer, setOriginalCustomer] = useState("");
     const [originalItems, setOriginalItems] = useState<OrderItem[]>([]);
+    const [originalNote, setOriginalNote] = useState("");
 
     useEffect(() => {
         loadOrder();
@@ -63,6 +66,7 @@ export default function ModifyOrderPage() {
             const productsMap = new Map<number, Product>(productsData.data.map((p: Product) => [p.id, p]));
 
             const customerValue = data.customerIdentifier || "";
+            const noteValue = data.note || "";
             const itemsValue = data.items.map((item: any) => {
                 const product = productsMap.get(item.productId);
                 const price = product?.price || 0;
@@ -76,6 +80,8 @@ export default function ModifyOrderPage() {
 
             setCustomer(customerValue);
             setOriginalCustomer(customerValue);
+            setNote(noteValue);
+            setOriginalNote(noteValue);
             setItems(itemsValue);
             setOriginalItems(itemsValue);
         } catch (err: any) {
@@ -127,6 +133,11 @@ export default function ModifyOrderPage() {
             // Check if customer changed
             if (customer !== originalCustomer) {
                 orderData.customerIdentifier = customer;
+            }
+
+            // Check if note changed
+            if (note !== originalNote) {
+                orderData.note = note;
             }
 
             // Check if items changed
@@ -256,6 +267,17 @@ export default function ModifyOrderPage() {
                                         onChange={(e) => setCustomer(e.target.value)}
                                         className="w-full bg-gray-400 rounded-md px-4 py-3 text-black focus:outline-none"
                                         placeholder="Table 1"
+                                    />
+                                </div>
+
+                                <div className="space-y-4">
+                                    <label className="block text-black font-medium">Note</label>
+                                    <textarea
+                                        value={note}
+                                        onChange={(e) => setNote(e.target.value)}
+                                        className="w-full bg-gray-400 rounded-md px-4 py-3 text-black focus:outline-none resize-none"
+                                        placeholder="Order notes..."
+                                        rows={3}
                                     />
                                 </div>
 
@@ -411,3 +433,4 @@ export default function ModifyOrderPage() {
         </div>
     );
 }
+
