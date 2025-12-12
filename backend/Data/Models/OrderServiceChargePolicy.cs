@@ -7,4 +7,5 @@ public class OrderServiceChargePolicy
 
     public int ServiceChargePoliciesId { get; set; }
     public ServiceChargePolicy ServiceChargePolicy { get; set; } = null!;
+
 }
