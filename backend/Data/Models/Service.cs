@@ -18,8 +18,11 @@ public class Service
 
     public Merchant Merchant { get; set; } = null!;
     public TaxCategories? TaxCategory { get; set; }
+
     public ICollection<EmployeeService> EmployeeServices { get; set; } = new List<EmployeeService>();
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
-    public ICollection<ServiceChargePolicy> ServiceChargePolicies { get; set; } = new List<ServiceChargePolicy>();
+
+    // Correct many-to-many (must match ServiceChargePolicy.cs + DbContext)
+    public ICollection<ServiceServiceChargePolicy> ServiceLinks { get; set; } = new List<ServiceServiceChargePolicy>();
 }

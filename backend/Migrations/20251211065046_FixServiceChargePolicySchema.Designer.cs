@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using backend.Data;
@@ -11,9 +12,11 @@ using backend.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251211065046_FixServiceChargePolicySchema")]
+    partial class FixServiceChargePolicySchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1199,20 +1202,20 @@ namespace backend.Migrations
             modelBuilder.Entity("backend.Data.Models.OrderServiceChargePolicy", b =>
                 {
                     b.HasOne("backend.Data.Models.Order", "Order")
-                        .WithMany("OrderLinks")
+                        .WithMany("ServiceChargePolicies")
                         .HasForeignKey("OrdersId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("backend.Data.Models.ServiceChargePolicy", "ServiceChargePolicy")
-                        .WithMany("OrderLinks")
+                    b.HasOne("backend.Data.Models.ServiceChargePolicy", "Policy")
+                        .WithMany("Orders")
                         .HasForeignKey("ServiceChargePoliciesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Order");
 
-                    b.Navigation("ServiceChargePolicy");
+                    b.Navigation("Policy");
                 });
 
             modelBuilder.Entity("backend.Data.Models.OrderTip", b =>
@@ -1354,21 +1357,21 @@ namespace backend.Migrations
 
             modelBuilder.Entity("backend.Data.Models.ServiceServiceChargePolicy", b =>
                 {
-                    b.HasOne("backend.Data.Models.ServiceChargePolicy", "ServiceChargePolicy")
-                        .WithMany("ServiceLinks")
+                    b.HasOne("backend.Data.Models.ServiceChargePolicy", "Policy")
+                        .WithMany("Services")
                         .HasForeignKey("ServiceChargePoliciesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("backend.Data.Models.Service", "Service")
-                        .WithMany("ServiceLinks")
+                        .WithMany("ServiceChargePolicies")
                         .HasForeignKey("ServicesServiceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Service");
+                    b.Navigation("Policy");
 
-                    b.Navigation("ServiceChargePolicy");
+                    b.Navigation("Service");
                 });
 
             modelBuilder.Entity("backend.Data.Models.TaxCategories", b =>
@@ -1437,13 +1440,13 @@ namespace backend.Migrations
                 {
                     b.Navigation("OrderItems");
 
-                    b.Navigation("OrderLinks");
-
                     b.Navigation("OrderTips");
 
                     b.Navigation("Payments");
 
                     b.Navigation("Refunds");
+
+                    b.Navigation("ServiceChargePolicies");
                 });
 
             modelBuilder.Entity("backend.Data.Models.Payment", b =>
@@ -1476,14 +1479,14 @@ namespace backend.Migrations
 
                     b.Navigation("Reservations");
 
-                    b.Navigation("ServiceLinks");
+                    b.Navigation("ServiceChargePolicies");
                 });
 
             modelBuilder.Entity("backend.Data.Models.ServiceChargePolicy", b =>
                 {
-                    b.Navigation("OrderLinks");
+                    b.Navigation("Orders");
 
-                    b.Navigation("ServiceLinks");
+                    b.Navigation("Services");
                 });
 
             modelBuilder.Entity("backend.Data.Models.TaxCategories", b =>

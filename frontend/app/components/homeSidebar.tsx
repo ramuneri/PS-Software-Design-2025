@@ -63,7 +63,7 @@ export default function Sidebar() {
           { name: "Service List", path: "/services" },
           { name: "Product List", path: "/products" },
           { name: "Discount List", path: "/discounts" },
-          { name: "Service Charge List", path: "/service-charges" },
+          { name: "Service Charge List", path: "/service-charge-policies" },
           { name: "Taxes List", path: "/taxes" },
           { name: "Payment List", path: "/payments" },
           { name: "Giftcard List", path: "/giftcards" },
