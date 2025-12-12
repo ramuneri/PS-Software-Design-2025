@@ -193,4 +193,66 @@ public class OrderService : IOrderService
             null
         );
     }
+
+    public async Task<OrderDto?> UpdateOrder(int id, string? customerIdentifier, IEnumerable<OrderItemDto>? items, string? note)
+    {
+        var order = await context.Orders
+            .Include(o => o.OrderItems)
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order == null)
+        {
+            return null;
+        }
+        
+        if (customerIdentifier != null)
+        {
+            order.CustomerIdentifier = customerIdentifier;
+        }
+        
+        if (note != null)
+        {
+            order.Note = note;
+        }
+        
+        if (items != null)
+        {
+            var itemsList = items.ToList();
+            
+            context.OrderItems.RemoveRange(order.OrderItems);
+            
+            var newOrderItems = itemsList.Select(item => new OrderItem
+            {
+                OrderId = order.Id,
+                ProductId = item.ProductId,
+                Quantity = item.Quantity
+            }).ToList();
+        
+            await context.OrderItems.AddRangeAsync(newOrderItems);
+        }
+
+        await context.SaveChangesAsync();
+        
+        return await GetOrder(id);
+    }
+    
+    public async Task<bool> DeleteOrder(int id)
+    {
+        var order = await context.Orders
+            .Include(o => o.OrderItems)
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order == null)
+        {
+            return false;
+        }
+        
+        context.OrderItems.RemoveRange(order.OrderItems);
+        
+        context.Orders.Remove(order);
+        
+        await context.SaveChangesAsync();
+
+        return true;
+    }
 }
