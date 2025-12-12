@@ -43,7 +43,15 @@ export default function CreateOrderPage() {
 
             const data = await res.json();
             console.log("Products from API:", data); // DEBUG
-            setProducts(data);
+            const productsArray = Array.isArray(data)
+            ? data
+            : Array.isArray(data.data)
+                ? data.data
+                : [];
+
+            setProducts(productsArray);
+
+
         } catch (err: any) {
             setError(err.message ?? "Unknown error");
         } finally {
