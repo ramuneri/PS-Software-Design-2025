@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 
@@ -17,6 +18,7 @@ type OrderDetail = {
     cancelledAt: string | null;
     employeeId: string | null;
     totalAmount: number;
+    note: string | null;
     items: OrderItem[];
 };
 
@@ -171,6 +173,14 @@ export default function OrderViewPage() {
                                         <div className="text-gray-600 font-medium px-2">Customer</div>
                                         <div className="bg-gray-200 rounded-md px-4 py-3 text-black">
                                             {order.customerIdentifier || "N/A"}
+                                        </div>
+                                    </div>
+
+                                    {/* Note */}
+                                    <div className="space-y-2">
+                                        <div className="text-gray-600 font-medium px-2">Note</div>
+                                        <div className="bg-gray-200 rounded-md px-4 py-3 text-black min-h-[80px]">
+                                            {order.note || "-"}
                                         </div>
                                     </div>
 

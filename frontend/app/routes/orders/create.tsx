@@ -20,6 +20,7 @@ type Product = {
 export default function CreateOrderPage() {
     const navigate = useNavigate();
     const [customer, setCustomer] = useState("");
+    const [note, setNote] = useState("");
     const [items, setItems] = useState<OrderItem[]>([]);
     const [showInventory, setShowInventory] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
@@ -69,10 +70,10 @@ export default function CreateOrderPage() {
                     productId: item.productId,
                     quantity: item.quantity
                 })),
-                note: ""
+                note: note
             };
 
-            console.log("Sending order data:", orderData); // DEBUG
+            console.log("Sending order data:", orderData);
 
             const res = await fetch(`${import.meta.env.VITE_API_URL}/orders`, {
                 method: "POST",
@@ -91,7 +92,7 @@ export default function CreateOrderPage() {
 
             const createdOrder = await res.json();
             console.log("Created order:", createdOrder);
-            
+
             navigate("/orders/view");
         } catch (err: any) {
             setError(err.message ?? "Failed to create order");
@@ -119,13 +120,11 @@ export default function CreateOrderPage() {
     };
 
     const handleSelectProduct = (product: Product) => {
-        // Check if item already exists
         const existingItem = items.find(
             (item) => item.productId === product.id
         );
 
         if (existingItem) {
-            // Increment quantity
             setItems(
                 items.map((item) =>
                     item.productId === product.id
@@ -138,7 +137,6 @@ export default function CreateOrderPage() {
                 )
             );
         } else {
-            // Add new item
             setItems([
                 ...items,
                 {
@@ -157,23 +155,19 @@ export default function CreateOrderPage() {
 
     return (
         <div className="bg-gray-200 flex flex-col" style={{ height: "calc(100vh - 52px)" }}>
-            {/* Main Content */}
             <div className="p-6 flex-1 flex flex-col overflow-hidden">
                 <div className="space-y-6 flex-1 flex flex-col">
                     <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
                         Create Order
                     </div>
 
-                    {/* Error Display */}
                     {error && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                             {error}
                         </div>
                     )}
 
-                    {/* Content Grid - Left side details/inventory, Right side items */}
                     <div className="grid grid-cols-2 gap-6 flex-1">
-                        {/* Left Side - Order Details OR Inventory */}
                         {!showInventory ? (
                             <div className="bg-gray-300 rounded-md p-8 space-y-8">
                                 <div className="space-y-4">
@@ -188,6 +182,17 @@ export default function CreateOrderPage() {
                                 </div>
 
                                 <div className="space-y-4">
+                                    <label className="block text-black font-medium">Note</label>
+                                    <textarea
+                                        value={note}
+                                        onChange={(e) => setNote(e.target.value)}
+                                        className="w-full bg-gray-400 rounded-md px-4 py-3 text-black focus:outline-none resize-none"
+                                        placeholder="Add special instructions or notes..."
+                                        rows={4}
+                                    />
+                                </div>
+
+                                <div className="space-y-4">
                                     <label className="block text-black font-medium">Total</label>
                                     <div className="bg-gray-400 rounded-md px-4 py-3 text-white">
                                         ${calculateTotal()}
@@ -196,12 +201,10 @@ export default function CreateOrderPage() {
                             </div>
                         ) : (
                             <div className="bg-gray-300 rounded-md p-6 flex flex-col overflow-hidden">
-                                {/* Inventory Header */}
                                 <div className="text-center text-black font-medium mb-4">
                                     Inventory
                                 </div>
 
-                                {/* Table Header */}
                                 <div className="grid grid-cols-12 gap-2 px-2 text-black font-medium text-sm mb-3">
                                     <span className="col-span-2">ItemID</span>
                                     <span className="col-span-4">Name</span>
@@ -210,7 +213,6 @@ export default function CreateOrderPage() {
                                     <span className="col-span-1 text-center">Add</span>
                                 </div>
 
-                                {/* Product Rows - Scrollable */}
                                 <div className="space-y-2 overflow-y-auto flex-1 mb-4">
                                     {loading && (
                                         <div className="text-black text-center py-8">
@@ -245,7 +247,6 @@ export default function CreateOrderPage() {
                                     ))}
                                 </div>
 
-                                {/* Back Button */}
                                 <button
                                     onClick={() => setShowInventory(false)}
                                     className="w-full bg-gray-400 hover:bg-gray-500 rounded-md py-2 text-black font-medium"
@@ -255,14 +256,11 @@ export default function CreateOrderPage() {
                             </div>
                         )}
 
-                        {/* Right Side - Items */}
                         <div className="space-y-4 flex flex-col">
-                            {/* Items Header */}
                             <div className="bg-gray-400 rounded-md py-3 px-4 text-center text-white font-medium">
                                 Items
                             </div>
 
-                            {/* Table Header */}
                             <div className="grid grid-cols-12 gap-3 px-4 text-white font-medium">
                                 <span className="col-span-4 text-black">Item name</span>
                                 <span className="col-span-3 text-center text-black">Quantity</span>
@@ -270,7 +268,6 @@ export default function CreateOrderPage() {
                                 <span className="col-span-2 text-center text-black">Delete</span>
                             </div>
 
-                            {/* Table Rows - Scrollable */}
                             <div className="space-y-3 overflow-y-auto flex-1">
                                 {items.length === 0 && (
                                     <div className="text-center text-gray-500 py-8">
@@ -303,9 +300,7 @@ export default function CreateOrderPage() {
                         </div>
                     </div>
 
-                    {/* Bottom Buttons */}
                     <div className="grid grid-cols-2 gap-6">
-                        {/* Left buttons */}
                         <div className="flex gap-6">
                             <button
                                 className="flex-1 bg-gray-300 hover:bg-gray-400 rounded-md py-3 text-black font-medium disabled:opacity-50"
@@ -323,7 +318,6 @@ export default function CreateOrderPage() {
                             </button>
                         </div>
 
-                        {/* Right button */}
                         <div>
                             <button
                                 onClick={handleAddItem}
