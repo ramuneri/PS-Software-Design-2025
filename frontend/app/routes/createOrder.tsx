@@ -226,7 +226,7 @@ export default function CreateOrderPage() {
                                         </div>
                                     )}
 
-                                    {!loading && !error && products.map((product) => (
+                                    {!loading && !error && products.length > 0 && products.map((product) => (
                                         <div
                                             key={product.id}
                                             className="grid grid-cols-12 gap-2 bg-gray-400 px-2 py-2 rounded-md items-center text-sm"
