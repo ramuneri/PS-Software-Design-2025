@@ -1,11 +1,13 @@
 using backend.Dtos;
-using backend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using backend.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace backend.Controllers;
 
 [ApiController]
 [Route("api/service-charge-policies")]
+[Authorize]
 public class ServiceChargePoliciesController : ControllerBase
 {
     private readonly IServiceChargePolicyService _service;
@@ -16,13 +18,16 @@ public class ServiceChargePoliciesController : ControllerBase
         _service = service;
     }
 
+    // GET: api/service-charge-policies?merchantId=1&includeInactive=true
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ServiceChargePolicyDto>>> GetAll(
-        [FromQuery] int merchantId)
+        [FromQuery] int merchantId,
+        [FromQuery] bool includeInactive = false)
     {
-        var result = await _service.GetAllAsync(merchantId);
+        var result = await _service.GetAllAsync(merchantId, includeInactive);
         return Ok(result);
     }
+
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<ServiceChargePolicyDto>> GetById(int id)
@@ -63,12 +68,11 @@ public class ServiceChargePoliciesController : ControllerBase
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
-    {
-        var success = await _service.DeleteAsync(id);
+        => await _service.DeleteAsync(id) ? NoContent() : NotFound();
 
-        if (!success)
-            return NotFound();
 
-        return NoContent();
-    }
+    [HttpPost("{id:int}/restore")]
+    public async Task<IActionResult> Restore(int id)
+        => await _service.RestoreAsync(id) ? NoContent() : NotFound();
+
 }

@@ -16,14 +16,21 @@ public class ServiceChargePolicyService : IServiceChargePolicyService
         _context = context;
     }
 
-    public async Task<IEnumerable<ServiceChargePolicyDto>> GetAllAsync(int merchantId)
+    public async Task<IEnumerable<ServiceChargePolicyDto>> GetAllAsync(
+        int merchantId,
+        bool includeInactive = false)
     {
-        var policies = await _context.ServiceChargePolicies
+        var query = _context.ServiceChargePolicies
             .Include(p => p.ServiceLinks)
             .Include(p => p.OrderLinks)
-            .Where(p => p.MerchantId == merchantId)
-            .ToListAsync();
+            .AsSplitQuery()
+            .Where(p => p.MerchantId == merchantId);
 
+
+        if (!includeInactive)
+            query = query.Where(p => p.IsActive);
+
+        var policies = await query.ToListAsync();
         return policies.Select(p => p.ToDto());
     }
 
@@ -32,7 +39,9 @@ public class ServiceChargePolicyService : IServiceChargePolicyService
         var policy = await _context.ServiceChargePolicies
             .Include(p => p.ServiceLinks)
             .Include(p => p.OrderLinks)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(p => p.Id == id && p.IsActive);
+
 
         return policy?.ToDto();
     }
@@ -69,8 +78,6 @@ public class ServiceChargePolicyService : IServiceChargePolicyService
         return entity.ToDto();
     }
 
-
-
     public async Task<ServiceChargePolicyDto?> UpdateAsync(
         int id,
         UpdateServiceChargePolicyDto dto)
@@ -80,7 +87,7 @@ public class ServiceChargePolicyService : IServiceChargePolicyService
             .Include(p => p.OrderLinks)
             .FirstOrDefaultAsync(p => p.Id == id);
 
-        if (entity is null)
+        if (entity == null)
             return null;
 
         entity.ApplyUpdate(dto);
@@ -88,7 +95,6 @@ public class ServiceChargePolicyService : IServiceChargePolicyService
         if (dto.ServiceIds is not null)
         {
             entity.ServiceLinks.Clear();
-
             foreach (var serviceId in dto.ServiceIds)
             {
                 entity.ServiceLinks.Add(new ServiceServiceChargePolicy
@@ -101,7 +107,6 @@ public class ServiceChargePolicyService : IServiceChargePolicyService
         if (dto.OrderIds is not null)
         {
             entity.OrderLinks.Clear();
-
             foreach (var orderId in dto.OrderIds)
             {
                 entity.OrderLinks.Add(new OrderServiceChargePolicy
@@ -115,18 +120,25 @@ public class ServiceChargePolicyService : IServiceChargePolicyService
         return entity.ToDto();
     }
 
-
-
     public async Task<bool> DeleteAsync(int id)
     {
-        var entity = await _context.ServiceChargePolicies.FindAsync(id);
-
-        if (entity is null)
+        var policy = await _context.ServiceChargePolicies.FindAsync(id);
+        if (policy == null)
             return false;
 
-        _context.ServiceChargePolicies.Remove(entity);
+        policy.IsActive = false;
         await _context.SaveChangesAsync();
+        return true;
+    }
 
+    public async Task<bool> RestoreAsync(int id)
+    {
+        var policy = await _context.ServiceChargePolicies.FindAsync(id);
+        if (policy == null)
+            return false;
+
+        policy.IsActive = true;
+        await _context.SaveChangesAsync();
         return true;
     }
 }
