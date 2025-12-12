@@ -5,24 +5,30 @@ namespace backend.Mapping;
 
 public static class ServiceChargePolicyMapping
 {
+
     // Entity -> Response DTO
     public static ServiceChargePolicyDto ToDto(this ServiceChargePolicy entity)
     {
         return new ServiceChargePolicyDto(
-            entity.Id,
-            entity.MerchantId,
-            entity.Name,
-            entity.Type,
-            entity.Value,
-            entity.IsActive,
-            entity.CreatedAt,
-            entity.ServiceLinks.Select(s => s.ServicesServiceId),
-            entity.OrderLinks.Select(o => o.OrdersId)
+            Id: entity.Id,
+            MerchantId: entity.MerchantId,
+            Name: entity.Name,
+            Type: entity.Type,
+            Value: entity.Value,
+            IsActive: entity.IsActive,
+            CreatedAt: entity.CreatedAt,
+            ServiceIds: entity.ServiceLinks
+                .Select(sl => sl.ServicesServiceId)
+                .ToList(),
+            OrderIds: entity.OrderLinks
+                .Select(ol => ol.OrdersId)
+                .ToList()
         );
     }
 
     // Create DTO -> Entity
-    public static ServiceChargePolicy ToEntity(this CreateServiceChargePolicyDto dto)
+    public static ServiceChargePolicy ToEntity(
+        this CreateServiceChargePolicyDto dto)
     {
         return new ServiceChargePolicy
         {
@@ -31,11 +37,16 @@ public static class ServiceChargePolicyMapping
             Type = dto.Type,
             Value = dto.Value,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+
+            // Initialize collections to avoid null refs
+            ServiceLinks = new List<ServiceServiceChargePolicy>(),
+            OrderLinks = new List<OrderServiceChargePolicy>()
         };
     }
 
-    // Update DTO -> existing Entity
+
+    // Update DTO -> Entity
     public static void ApplyUpdate(
         this ServiceChargePolicy entity,
         UpdateServiceChargePolicyDto dto)
@@ -52,5 +63,4 @@ public static class ServiceChargePolicyMapping
         if (dto.IsActive.HasValue)
             entity.IsActive = dto.IsActive.Value;
     }
-
 }

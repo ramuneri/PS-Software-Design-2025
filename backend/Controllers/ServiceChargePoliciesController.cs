@@ -16,7 +16,6 @@ public class ServiceChargePoliciesController : ControllerBase
         _service = service;
     }
 
-    // GET: api/service-charge-policies?merchantId=1
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ServiceChargePolicyDto>>> GetAll(
         [FromQuery] int merchantId)
@@ -25,7 +24,6 @@ public class ServiceChargePoliciesController : ControllerBase
         return Ok(result);
     }
 
-    // GET: api/service-charge-policies/5
     [HttpGet("{id:int}")]
     public async Task<ActionResult<ServiceChargePolicyDto>> GetById(int id)
     {
@@ -37,7 +35,6 @@ public class ServiceChargePoliciesController : ControllerBase
         return Ok(result);
     }
 
-    // POST: api/service-charge-policies
     [HttpPost]
     public async Task<ActionResult<ServiceChargePolicyDto>> Create(
         [FromBody] CreateServiceChargePolicyDto dto)
@@ -50,7 +47,6 @@ public class ServiceChargePoliciesController : ControllerBase
             created);
     }
 
-    // PATCH: api/service-charge-policies/5
     [HttpPatch("{id:int}")]
     public async Task<ActionResult<ServiceChargePolicyDto>> Patch(
         int id,
@@ -65,7 +61,6 @@ public class ServiceChargePoliciesController : ControllerBase
     }
 
 
-    // DELETE: api/service-charge-policies/5
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {

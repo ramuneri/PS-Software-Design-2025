@@ -41,11 +41,35 @@ public class ServiceChargePolicyService : IServiceChargePolicyService
     {
         var entity = dto.ToEntity();
 
+        if (dto.ServiceIds is not null)
+        {
+            foreach (var serviceId in dto.ServiceIds)
+            {
+                entity.ServiceLinks.Add(new ServiceServiceChargePolicy
+                {
+                    ServicesServiceId = serviceId
+                });
+            }
+        }
+
+        if (dto.OrderIds is not null)
+        {
+            foreach (var orderId in dto.OrderIds)
+            {
+                entity.OrderLinks.Add(new OrderServiceChargePolicy
+                {
+                    OrdersId = orderId
+                });
+            }
+        }
+
         _context.ServiceChargePolicies.Add(entity);
         await _context.SaveChangesAsync();
 
         return entity.ToDto();
     }
+
+
 
     public async Task<ServiceChargePolicyDto?> UpdateAsync(
         int id,
@@ -61,10 +85,37 @@ public class ServiceChargePolicyService : IServiceChargePolicyService
 
         entity.ApplyUpdate(dto);
 
-        await _context.SaveChangesAsync();
+        if (dto.ServiceIds is not null)
+        {
+            entity.ServiceLinks.Clear();
 
+            foreach (var serviceId in dto.ServiceIds)
+            {
+                entity.ServiceLinks.Add(new ServiceServiceChargePolicy
+                {
+                    ServicesServiceId = serviceId
+                });
+            }
+        }
+
+        if (dto.OrderIds is not null)
+        {
+            entity.OrderLinks.Clear();
+
+            foreach (var orderId in dto.OrderIds)
+            {
+                entity.OrderLinks.Add(new OrderServiceChargePolicy
+                {
+                    OrdersId = orderId
+                });
+            }
+        }
+
+        await _context.SaveChangesAsync();
         return entity.ToDto();
     }
+
+
 
     public async Task<bool> DeleteAsync(int id)
     {
