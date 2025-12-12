@@ -41,4 +41,12 @@ public class OrdersController(IOrderService orderService) : ControllerBase
 
         return Created(uri, newOrder);
     }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteOrder([FromRoute] int id)
+    {
+        var success = await orderService.DeleteOrder(id);
+        
+        return success ? NoContent() : NotFound();
+    }
 }

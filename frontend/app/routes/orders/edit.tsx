@@ -1,6 +1,5 @@
-
-import { useState } from "react";
-import {useNavigate} from "react-router";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useParams } from "react-router";
 
 type OrderItem = {
     productId: number;
@@ -17,14 +16,74 @@ type Product = {
     isActive: boolean;
 };
 
-export default function CreateOrderPage() {
+export default function ModifyOrderPage() {
     const navigate = useNavigate();
+    const { id } = useParams<{ id: string }>();
     const [customer, setCustomer] = useState("");
     const [items, setItems] = useState<OrderItem[]>([]);
     const [showInventory, setShowInventory] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [originalCustomer, setOriginalCustomer] = useState("");
+    const [originalItems, setOriginalItems] = useState<OrderItem[]>([]);
+
+    useEffect(() => {
+        loadOrder();
+    }, [id]);
+
+    const loadOrder = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const token = localStorage.getItem("access-token");
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/orders/${id}`, {
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+            });
+
+            if (!res.ok) throw new Error(`Failed to load order (${res.status})`);
+
+            const data = await res.json();
+
+            // Load products to get prices
+            const productsRes = await fetch(`${import.meta.env.VITE_API_URL}/api/products`, {
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+            });
+
+            if (!productsRes.ok) throw new Error(`Failed to load products (${productsRes.status})`);
+
+            const productsData = await productsRes.json();
+            const productsMap = new Map<number, Product>(productsData.data.map((p: Product) => [p.id, p]));
+
+            const customerValue = data.customerIdentifier || "";
+            const itemsValue = data.items.map((item: any) => {
+                const product = productsMap.get(item.productId);
+                const price = product?.price || 0;
+                return {
+                    productId: item.productId,
+                    itemName: product?.name || `Product ${item.productId}`,
+                    quantity: item.quantity,
+                    totalPrice: price * item.quantity
+                };
+            });
+
+            setCustomer(customerValue);
+            setOriginalCustomer(customerValue);
+            setItems(itemsValue);
+            setOriginalItems(itemsValue);
+        } catch (err: any) {
+            setError(err.message ?? "Failed to load order");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const loadProducts = async () => {
         try {
@@ -50,7 +109,7 @@ export default function CreateOrderPage() {
         }
     };
 
-    const handleCreate = async () => {
+    const handleModify = async () => {
         try {
             setLoading(true);
             setError(null);
@@ -62,20 +121,33 @@ export default function CreateOrderPage() {
 
             const token = localStorage.getItem("access-token");
 
-            const orderData = {
-                customerIdentifier: customer,
-                employeeId: "4bed74b1-0fe3-4c57-98c0-03c187acdbf6", // TODO
-                items: items.map(item => ({
+            // Build patch body with only changed fields
+            const orderData: any = {};
+
+            // Check if customer changed
+            if (customer !== originalCustomer) {
+                orderData.customerIdentifier = customer;
+            }
+
+            // Check if items changed
+            const itemsChanged = JSON.stringify(items) !== JSON.stringify(originalItems);
+            if (itemsChanged) {
+                orderData.items = items.map(item => ({
                     productId: item.productId,
                     quantity: item.quantity
-                })),
-                note: ""
-            };
+                }));
+            }
+
+            // If nothing changed, just navigate back
+            if (Object.keys(orderData).length === 0) {
+                navigate("/orders/view");
+                return;
+            }
 
             console.log("Sending order data:", orderData); // DEBUG
 
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/orders`, {
-                method: "POST",
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/orders/${id}`, {
+                method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
                     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -86,15 +158,15 @@ export default function CreateOrderPage() {
             if (!res.ok) {
                 const errorText = await res.text();
                 console.error("Error response:", errorText);
-                throw new Error(`Failed to create order (${res.status})`);
+                throw new Error(`Failed to modify order (${res.status})`);
             }
 
-            const createdOrder = await res.json();
-            console.log("Created order:", createdOrder);
-            
+            const modifiedOrder = await res.json();
+            console.log("Modified order:", modifiedOrder);
+
             navigate("/orders/view");
         } catch (err: any) {
-            setError(err.message ?? "Failed to create order");
+            setError(err.message ?? "Failed to modify order");
         } finally {
             setLoading(false);
         }
@@ -151,9 +223,9 @@ export default function CreateOrderPage() {
         }
     };
 
-    const calculateTotal = () => {
+    const calculateTotal = useMemo(() => {
         return items.reduce((sum, item) => sum + item.totalPrice, 0).toFixed(2);
-    };
+    }, [items]);
 
     return (
         <div className="bg-gray-200 flex flex-col" style={{ height: "calc(100vh - 52px)" }}>
@@ -161,7 +233,7 @@ export default function CreateOrderPage() {
             <div className="p-6 flex-1 flex flex-col overflow-hidden">
                 <div className="space-y-6 flex-1 flex flex-col">
                     <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
-                        Create Order
+                        Modify Order #{id}
                     </div>
 
                     {/* Error Display */}
@@ -190,7 +262,7 @@ export default function CreateOrderPage() {
                                 <div className="space-y-4">
                                     <label className="block text-black font-medium">Total</label>
                                     <div className="bg-gray-400 rounded-md px-4 py-3 text-white">
-                                        ${calculateTotal()}
+                                        ${calculateTotal}
                                     </div>
                                 </div>
                             </div>
@@ -309,14 +381,14 @@ export default function CreateOrderPage() {
                         <div className="flex gap-6">
                             <button
                                 className="flex-1 bg-gray-300 hover:bg-gray-400 rounded-md py-3 text-black font-medium disabled:opacity-50"
-                                onClick={handleCreate}
+                                onClick={handleModify}
                                 disabled={loading || items.length === 0}
                             >
-                                {loading ? "Creating..." : "Create"}
+                                {loading ? "Saving..." : "Save"}
                             </button>
                             <button
                                 className="flex-1 bg-gray-300 hover:bg-gray-400 rounded-md py-3 text-black font-medium"
-                                onClick={() => navigate("/")}
+                                onClick={() => navigate("/orders/view")}
                                 disabled={loading}
                             >
                                 Cancel

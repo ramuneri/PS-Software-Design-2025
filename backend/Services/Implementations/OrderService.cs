@@ -193,4 +193,24 @@ public class OrderService : IOrderService
             null
         );
     }
+
+    public async Task<bool> DeleteOrder(int id)
+    {
+        var order = await context.Orders
+            .Include(o => o.OrderItems)
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order == null)
+        {
+            return false;
+        }
+        
+        context.OrderItems.RemoveRange(order.OrderItems);
+        
+        context.Orders.Remove(order);
+        
+        await context.SaveChangesAsync();
+
+        return true;
+    }
 }
