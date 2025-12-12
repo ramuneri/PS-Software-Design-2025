@@ -5,9 +5,9 @@ export default [
     index("routes/home.tsx"),
 
     
-    route("orders/create", "routes/createOrder.tsx"),
-    route("orders/view", "routes/ordersList.tsx"),
-    route("orders/view/:id", "routes/viewOrder.tsx"),
+    route("orders/view", "routes/orders/index.tsx"),
+    route("orders/create", "routes/orders/create.tsx"),
+    route("orders/view/:id", "routes/orders/view.tsx"),
     
     route("discounts", "routes/discounts/index.tsx"),
     route("discounts/create", "routes/discounts/create.tsx"),
