@@ -35,7 +35,7 @@ export default function ServiceChargePolicyCreate() {
       setServices(Array.isArray(serviceJson.data) ? serviceJson.data : []);
 
       const orderRes = await apiFetch(
-        `${import.meta.env.VITE_API_URL}/api/orders`
+        `${import.meta.env.VITE_API_URL}/orders`
       );
       const orderJson = await orderRes.json();
       setOrders(Array.isArray(orderJson) ? orderJson : []);
