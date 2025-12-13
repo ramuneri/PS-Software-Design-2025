@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link } from "react-router-dom";
 
 interface SidebarSectionProps {
   title: string;
@@ -75,8 +75,8 @@ export default function Sidebar() {
         isActive={activeSection === "calendar"}
         onToggle={() => toggleSection("calendar")}
         links={[
-          { name: "Reservations", path: "/calendar" },
-          { name: "Customers", path: "/calendar" },
+          { name: "Reservations", path: "/reservations" },
+          { name: "Customers", path: "/customers" },
         ]}
       />
       <SidebarSection
