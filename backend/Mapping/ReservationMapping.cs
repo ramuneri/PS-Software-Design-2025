@@ -10,9 +10,13 @@ public static class ReservationMapping
         return new ReservationDto(
             entity.Id,
             entity.EmployeeId,
-            entity.Employee?.Name,
+            entity.Employee != null
+                ? $"{entity.Employee.Name} {entity.Employee.Surname}"
+                : null,
             entity.CustomerId,
-            entity.Customer?.Name,
+            entity.Customer != null
+                ? $"{entity.Customer.Name} {entity.Customer.Surname}"
+                : null,
             entity.ServiceId,
             entity.Service?.Name,
             entity.Status ?? "Booked",
@@ -21,19 +25,5 @@ public static class ReservationMapping
             entity.BookedAt ?? DateTime.MinValue,
             entity.IsActive
         );
-    }
-
-    public static Reservation ToEntity(this CreateReservationDto dto)
-    {
-        return new Reservation
-        {
-            EmployeeId = dto.EmployeeId,
-            CustomerId = dto.CustomerId,
-            ServiceId = dto.ServiceId,
-            StartTime = dto.StartTime,
-            Status = "Booked",
-            IsActive = true,
-            BookedAt = DateTime.UtcNow
-        };
     }
 }
