@@ -1,16 +1,17 @@
 namespace backend.Dtos;
 
-public record ReservationDto(
+public record ReservationDto
+(
     int Id,
     string? EmployeeId,
-    string? CustomerId,
-    int? ServiceId,
-    string? Status,
-    DateTime? StartTime,
-    DateTime? EndTime,
-    DateTime? BookedAt,
-    bool IsActive,
     string? EmployeeName,
+    string? CustomerId,
     string? CustomerName,
-    string? ServiceName
+    int? ServiceId,
+    string? ServiceName,
+    string Status,
+    DateTime StartTime,
+    DateTime EndTime,
+    DateTime BookedAt,
+    bool IsActive
 );
