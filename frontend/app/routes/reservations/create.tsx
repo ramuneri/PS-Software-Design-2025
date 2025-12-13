@@ -59,7 +59,6 @@ useEffect(() => {
       const employeesJson = await employeesRes.json();
       const customersJson = await customersRes.json();
 
-      // 🔑 NORMALIZATION (this is the fix)
       setServices(
         Array.isArray(servicesJson)
           ? servicesJson
@@ -112,7 +111,7 @@ useEffect(() => {
             serviceId,
             employeeId,
             customerId,
-            startTime,
+            startTime: new Date(startTime).toISOString(),
           }),
         }
       );

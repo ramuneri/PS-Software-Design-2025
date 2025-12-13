@@ -48,32 +48,37 @@ public class ReservationService : IReservationService
 
     public async Task<ReservationDto> CreateAsync(CreateReservationDto dto)
     {
-        var service = await _db.Services.FindAsync(dto.ServiceId)
-            ?? throw new Exception("Service not found");
-
-        var reservation = new Reservation
+        try
         {
-            CustomerId = dto.CustomerId,
-            EmployeeId = dto.EmployeeId,
-            ServiceId = dto.ServiceId,
-            StartTime = dto.StartTime,
-            EndTime = dto.StartTime.AddMinutes(service.DurationMinutes ?? 0),
-            Status = "Booked",
-            IsActive = true,
-            BookedAt = DateTime.UtcNow
-        };
+            var service = await _db.Services.FindAsync(dto.ServiceId)
+                ?? throw new Exception("Service not found");
 
-        _db.Reservations.Add(reservation);
-        await _db.SaveChangesAsync();
+            var duration = service.DurationMinutes ?? 60;
 
-        var loaded = await _db.Reservations
-            .Include(r => r.Employee)
-            .Include(r => r.Customer)
-            .Include(r => r.Service)
-            .FirstAsync(r => r.Id == reservation.Id);
+            var reservation = new Reservation
+            {
+                CustomerId = dto.CustomerId,
+                EmployeeId = dto.EmployeeId,
+                ServiceId = dto.ServiceId,
+                StartTime = dto.StartTime,
+                EndTime = dto.StartTime.AddMinutes(duration),
+                Status = "Booked",
+                IsActive = true,
+                BookedAt = DateTime.UtcNow
+            };
 
-        return loaded.ToDto();
+            _db.Reservations.Add(reservation);
+            await _db.SaveChangesAsync();
+
+            return reservation.ToDto();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            throw;
+        }
     }
+
 
 
     public async Task<ReservationDto?> UpdateAsync(int id, UpdateReservationDto dto)
