@@ -1,5 +1,7 @@
-using backend.Services.Interfaces;
+using backend.Data;
+using backend.Dtos;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace backend.Controllers;
 
@@ -7,18 +9,34 @@ namespace backend.Controllers;
 [Route("api/users")]
 public class UsersController : ControllerBase
 {
-    private readonly IUserService _service;
+    private readonly ApplicationDbContext _db;
 
-    public UsersController(IUserService service)
+    private const int TEST_MERCHANT_ID = 1;
+
+    public UsersController(ApplicationDbContext db)
     {
-        _service = service;
+        _db = db;
     }
 
-    [HttpGet("employees")]
-    public async Task<IActionResult> GetEmployees([FromQuery] int merchantId)
-        => Ok(await _service.GetEmployeesAsync(merchantId));
+    // GET /api/users?role=Employee
+    // GET /api/users?role=Customer
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<UserListDto>>> GetUsers(
+        [FromQuery] string role)
+    {
+        var users = await _db.Users
+            .Where(u =>
+                u.Role == role &&
+                u.MerchantId == TEST_MERCHANT_ID)
+            .Select(u => new UserListDto(
+                u.Id,
+                u.Email!,
+                string.IsNullOrWhiteSpace(u.Name)
+                    ? u.Email!
+                    : u.Name
+            ))
+            .ToListAsync();
 
-    [HttpGet("customers")]
-    public async Task<IActionResult> GetCustomers([FromQuery] int merchantId)
-        => Ok(await _service.GetCustomersAsync(merchantId));
+        return Ok(users);
+    }
 }

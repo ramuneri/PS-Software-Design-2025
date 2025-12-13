@@ -16,9 +16,9 @@ public static class ReservationMapping
             entity.ServiceId,
             entity.Service?.Name,
             entity.Status ?? "Booked",
-            entity.StartTime ?? DateTime.MinValue,
-            entity.EndTime ?? DateTime.MinValue,
-            entity.BookedAt ?? DateTime.MinValue,
+            entity.StartTime!.Value,
+            entity.EndTime!.Value,
+            entity.BookedAt!.Value,
             entity.IsActive
         );
     }

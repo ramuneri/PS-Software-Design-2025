@@ -8,8 +8,9 @@ type Service = {
 
 type User = {
   id: string;
-  name: string;
+  name: string | null;
   email: string;
+  role: string;
 };
 
 function authHeaders(): Record<string, string> {
@@ -25,43 +26,69 @@ export default function CreateReservationPage() {
   const [customers, setCustomers] = useState<User[]>([]);
 
   const [serviceId, setServiceId] = useState<number | "">("");
-  const [employeeId, setEmployeeId] = useState<string>("");
-  const [customerId, setCustomerId] = useState<string>("");
+  const [employeeId, setEmployeeId] = useState("");
+  const [customerId, setCustomerId] = useState("");
   const [startTime, setStartTime] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [servicesRes, employeesRes, customersRes] = await Promise.all([
-          fetch(`${import.meta.env.VITE_API_URL}/api/services`, {
-            headers: authHeaders(),
-          }),
-          fetch(`${import.meta.env.VITE_API_URL}/api/users?role=Employee`, {
-            headers: authHeaders(),
-          }),
-          fetch(`${import.meta.env.VITE_API_URL}/api/users?role=Customer`, {
-            headers: authHeaders(),
-          }),
-        ]);
-        
-        const servicesJson = await servicesRes.json();
-        const employeesJson = await employeesRes.json();
-        const customersJson = await customersRes.json();
 
-        setServices(Array.isArray(servicesJson) ? servicesJson : servicesJson.data ?? []);
-        setEmployees(Array.isArray(employeesJson) ? employeesJson : employeesJson.data ?? []);
-        setCustomers(Array.isArray(customersJson) ? customersJson : customersJson.data ?? []);
+useEffect(() => {
+  const loadData = async () => {
+    try {
+      setError(null);
 
-      } catch {
-        setError("Failed to load reservation data");
+      const [servicesRes, employeesRes, customersRes] = await Promise.all([
+        fetch(`${import.meta.env.VITE_API_URL}/api/services`, {
+          headers: authHeaders(),
+        }),
+        fetch(`${import.meta.env.VITE_API_URL}/api/users?role=Employee`, {
+          headers: authHeaders(),
+        }),
+        fetch(`${import.meta.env.VITE_API_URL}/api/users?role=Customer`, {
+          headers: authHeaders(),
+        }),
+      ]);
+
+      if (!servicesRes.ok || !employeesRes.ok || !customersRes.ok) {
+        throw new Error("Failed to load data");
       }
-    };
 
-    loadData();
-  }, []);
+      const servicesJson = await servicesRes.json();
+      const employeesJson = await employeesRes.json();
+      const customersJson = await customersRes.json();
+
+      // 🔑 NORMALIZATION (this is the fix)
+      setServices(
+        Array.isArray(servicesJson)
+          ? servicesJson
+          : servicesJson.data ?? []
+      );
+
+      setEmployees(
+        Array.isArray(employeesJson)
+          ? employeesJson
+          : employeesJson.data ?? []
+      );
+
+      setCustomers(
+        Array.isArray(customersJson)
+          ? customersJson
+          : customersJson.data ?? []
+      );
+
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load reservation data");
+    }
+  };
+
+  loadData();
+}, []);
+
+
+
 
   const handleCreate = async () => {
     if (!serviceId || !employeeId || !customerId || !startTime) {
@@ -150,7 +177,7 @@ export default function CreateReservationPage() {
               <option value="">Select customer</option>
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name || c.email}
+                  {c.name ?? c.email}
                 </option>
               ))}
             </select>
@@ -169,7 +196,7 @@ export default function CreateReservationPage() {
               <option value="">Select employee</option>
               {employees.map((e) => (
                 <option key={e.id} value={e.id}>
-                  {e.name || e.email}
+                  {e.name ?? e.email}
                 </option>
               ))}
             </select>
@@ -189,7 +216,6 @@ export default function CreateReservationPage() {
           </div>
         </div>
 
-        {/* ACTIONS */}
         <div className="flex gap-4">
           <button
             onClick={handleCreate}
