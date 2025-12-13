@@ -66,8 +66,15 @@ public class ReservationService : IReservationService
         _db.Reservations.Add(reservation);
         await _db.SaveChangesAsync();
 
-        return reservation.ToDto();
+        var loaded = await _db.Reservations
+            .Include(r => r.Employee)
+            .Include(r => r.Customer)
+            .Include(r => r.Service)
+            .FirstAsync(r => r.Id == reservation.Id);
+
+        return loaded.ToDto();
     }
+
 
     public async Task<ReservationDto?> UpdateAsync(int id, UpdateReservationDto dto)
     {

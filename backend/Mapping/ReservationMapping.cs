@@ -10,13 +10,9 @@ public static class ReservationMapping
         return new ReservationDto(
             entity.Id,
             entity.EmployeeId,
-            entity.Employee != null
-                ? $"{entity.Employee.Name} {entity.Employee.Surname}"
-                : null,
+            entity.Employee?.Name ?? entity.Employee?.Email,
             entity.CustomerId,
-            entity.Customer != null
-                ? $"{entity.Customer.Name} {entity.Customer.Surname}"
-                : null,
+            entity.Customer?.Name ?? entity.Customer?.Email,
             entity.ServiceId,
             entity.Service?.Name,
             entity.Status ?? "Booked",
