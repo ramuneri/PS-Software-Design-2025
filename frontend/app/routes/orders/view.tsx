@@ -182,7 +182,7 @@ export default function OrderViewPage() {
                                         {/* Note */}
                                         <div className="space-y-2">
                                             <div className="text-gray-600 font-medium px-2">Note</div>
-                                            <div className="bg-gray-200 rounded-md px-4 py-3 text-black min-h-[80px]">
+                                            <div className="bg-gray-200 rounded-md px-4 py-3 text-black min-h-20">
                                                 {order.note || "-"}
                                             </div>
                                         </div>
