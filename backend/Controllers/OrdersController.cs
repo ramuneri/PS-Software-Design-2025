@@ -20,6 +20,18 @@ public record UpdateOrderRequest(
     string? Note
 );
 
+public record CreatePaymentRequest(
+    string Method,
+    decimal Amount,
+    string Currency,
+    string? Provider
+);
+
+public record CreatePaymentResponse(
+    PaymentDto Data,
+    decimal Change
+);
+
 [Authorize]
 [ApiController]
 [Route("[controller]")]
@@ -93,4 +105,24 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         
         return success ? NoContent() : NotFound();
     }
+
+    [HttpPost("{orderId:int}/payments")]
+    public async Task<ActionResult<CreatePaymentResponse>> CreatePaymentForOrder(
+    [FromRoute] int orderId,
+    [FromBody] CreatePaymentRequest request)
+    {
+        var (payment, change, error) = await orderService.CreatePaymentForOrder(
+            orderId,
+            request.Method,
+            request.Amount,
+            request.Currency,
+            request.Provider
+        );
+
+        if (error == "NOT_FOUND") return NotFound();
+        if (error != null) return BadRequest(error);
+
+        return StatusCode(StatusCodes.Status201Created, new CreatePaymentResponse(payment!, change));
+    }
+
 }

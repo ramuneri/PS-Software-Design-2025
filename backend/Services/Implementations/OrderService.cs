@@ -291,4 +291,83 @@ public class OrderService : IOrderService
 
         return true;
     }
+
+    public async Task<(PaymentDto? Payment, decimal Change, string? Error)> CreatePaymentForOrder(
+        int orderId,
+        string method,
+        decimal amount,
+        string currency,
+        string? provider
+    )
+    {
+        var order = await context.Orders
+            .Include(o => o.OrderItems)
+            .Include(o => o.Payments)
+            .FirstOrDefaultAsync(o => o.Id == orderId);
+
+        if (order == null)
+            return (null, 0m, "NOT_FOUND");
+
+        if (order.CancelledAt is not null)
+            return (null, 0m, "Order is cancelled.");
+
+        if (order.ClosedAt is not null)
+            return (null, 0m, "Order is already closed.");
+
+        if (amount <= 0)
+            return (null, 0m, "Amount must be positive.");
+
+        if (string.IsNullOrWhiteSpace(method))
+            return (null, 0m, "Method is required.");
+
+        if (string.IsNullOrWhiteSpace(currency))
+            return (null, 0m, "Currency is required.");
+
+        var orderTotal = order.TotalAmount;
+        var alreadyPaid = (order.Payments ?? new List<Payment>()).Sum(p => p.Amount);
+        var remaining = orderTotal - alreadyPaid;
+
+        if (remaining <= 0m)
+            return (null, 0m, "Order is already fully paid.");
+
+
+        decimal change = 0m;
+
+        if (method.Equals("CASH", StringComparison.OrdinalIgnoreCase))
+        {
+            if (amount < remaining)
+                return (null, 0m, $"Insufficient cash. Remaining balance is {remaining:0.00}");
+
+            change = amount - remaining;
+            amount = remaining;
+
+            provider = null;
+        }
+
+        var paymentEntity = new Payment
+        {
+            OrderId = order.Id,
+            Method = method.ToUpperInvariant(),
+            Amount = amount,
+            Currency = currency,
+            Provider = provider,
+            PaymentStatus = "SUCCEEDED"
+        };
+
+        context.Payments.Add(paymentEntity);
+        await context.SaveChangesAsync();
+
+        var dto = new PaymentDto(
+            paymentEntity.PaymentId,
+            paymentEntity.OrderId,
+            paymentEntity.Method,
+            paymentEntity.Amount,
+            paymentEntity.Provider,
+            paymentEntity.Currency,
+            paymentEntity.PaymentStatus
+        );
+
+        return (dto, change, null);
+    }
+
 }
