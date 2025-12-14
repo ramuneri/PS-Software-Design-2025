@@ -75,6 +75,11 @@ export default function EditReservationPage() {
   }, [id]);
 
   const handleSave = async () => {
+    if (status === "Completed") {
+        setError("Completed reservations cannot be edited");
+        return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -141,10 +146,18 @@ export default function EditReservationPage() {
           <div>
             <label className="block font-medium mb-1">Employee</label>
             <select
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              className="w-full bg-gray-400 px-4 py-2 rounded"
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value)}
+                disabled={status === "Completed"}
+                className={`w-full px-4 py-2 rounded ${
+                    status === "Completed"
+                    ? "bg-gray-300 cursor-not-allowed"
+                    : "bg-gray-400"
+                }`}
             >
+
+
+
               <option value="">Select employee</option>
               {employees.map((e) => (
                 <option key={e.id} value={e.id}>
@@ -156,12 +169,20 @@ export default function EditReservationPage() {
 
           <div>
             <label className="block font-medium mb-1">Start time</label>
-            <input
-              type="datetime-local"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="w-full bg-gray-400 px-4 py-2 rounded"
+
+              <input
+                type="datetime-local"
+                value={startTime}
+                disabled={status === "Completed"}
+                min={toDateTimeLocalValue(new Date())}
+                onChange={(e) => setStartTime(e.target.value)}
+                className={`w-full px-4 py-2 rounded ${
+                    status === "Completed"
+                    ? "bg-gray-300 cursor-not-allowed"
+                    : "bg-gray-400"
+                }`}
             />
+
           </div>
 
           <div>

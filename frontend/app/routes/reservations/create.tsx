@@ -18,6 +18,14 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function toDateTimeLocalValue(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+
 export default function CreateReservationPage() {
   const navigate = useNavigate();
 
@@ -210,6 +218,7 @@ useEffect(() => {
               type="datetime-local"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
+              min={toDateTimeLocalValue(new Date())}
               className="w-full bg-gray-400 rounded-md px-4 py-2"
             />
           </div>
