@@ -6,11 +6,13 @@ namespace backend.Mapping;
 public static class UserMapping
 {
     public static UserListDto ToListDto(this User user)
-        => new(
-            user.Id,
-            user.Email!,
+    => new(
+        user.Id,
+        user.Email!,
+        (
             string.IsNullOrWhiteSpace(user.Name)
                 ? user.Email
-                : $"{user.Name} {user.Surname}".Trim()
-        );
+                : $"{user.Name ?? ""} {user.Surname ?? ""}".Trim()
+        )!
+    );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useLocation } from "react-router";
 
 interface HeaderProps {
     userName?: string;
@@ -11,6 +11,19 @@ export default function Header({ userName, email, setUser }: HeaderProps) {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const navigate = useNavigate();
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const location = useLocation();
+
+    const handleBack = () => {
+        if (window.history.length > 1) {
+            navigate(-1);
+            return;
+        }
+
+        //fallback
+        navigate("/");
+    };
+
+    const showBackButton = location.pathname !== "/";
 
     const handleLogout = async () => {
         try {
@@ -51,9 +64,21 @@ export default function Header({ userName, email, setUser }: HeaderProps) {
     return (
         <header className="bg-gray-300 py-3 px-6 flex justify-between items-center">
             {/* Left side - Logo */}
-            <Link to={"/"} className="text-black text-base font-medium">
-                OMS
-            </Link>
+            <div className="flex items-center gap-3">
+                {showBackButton && (
+                    <button
+                        onClick={handleBack}
+                        className="bg-gray-200 border border-black rounded-md px-3 py-1 text-black text-sm hover:bg-gray-300"
+                        title="<- Back"
+                    >
+                        Back
+                    </button>
+                )}
+
+                <Link to={"/"} className="text-black text-base font-medium">
+                    OMS
+                </Link>
+            </div>
 
             {/* Right side - User info */}
             <div className="flex items-center space-x-2">

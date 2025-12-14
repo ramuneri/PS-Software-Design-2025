@@ -239,7 +239,7 @@ export default function ModifyOrderPage() {
     }, [items]);
 
     return (
-        <div className="bg-gray-200 flex flex-col" style={{ height: "calc(100vh - 52px)" }}>
+        <div className="bg-gray-200 flex flex-col min-h-[calc(100vh-52px)] overflow-y-auto">
             {/* Main Content */}
             <div className="p-6 flex-1 flex flex-col overflow-hidden">
                 <div className="space-y-6 flex-1 flex flex-col">

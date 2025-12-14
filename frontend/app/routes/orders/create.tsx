@@ -17,6 +17,22 @@ type Product = {
     isActive: boolean;
 };
 
+function getEmployeeIdFromToken(): string | null {
+    const token = localStorage.getItem("access-token");
+    if (!token) return null;
+
+    try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        return (
+            payload[
+            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"
+            ] || payload.sub || null
+        );
+    } catch {
+        return null;
+    }
+}
+
 export default function CreateOrderPage() {
     const navigate = useNavigate();
     const [customer, setCustomer] = useState("");
@@ -65,7 +81,7 @@ export default function CreateOrderPage() {
 
             const orderData = {
                 customerIdentifier: customer,
-                employeeId: "4bed74b1-0fe3-4c57-98c0-03c187acdbf6", // TODO
+                employeeId: getEmployeeIdFromToken(),
                 items: items.map(item => ({
                     productId: item.productId,
                     quantity: item.quantity
@@ -157,7 +173,7 @@ export default function CreateOrderPage() {
     };
 
     return (
-        <div className="bg-gray-200 flex flex-col" style={{ height: "calc(100vh - 52px)" }}>
+        <div className="bg-gray-200 flex flex-col min-h-[calc(100vh-52px)] overflow-y-auto">
             {/* Main Content */}
             <div className="p-6 flex-1 flex flex-col overflow-hidden">
                 <div className="space-y-6 flex-1 flex flex-col">
