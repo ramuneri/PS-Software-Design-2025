@@ -10,7 +10,6 @@ namespace backend.Services.Implementations;
 public class ReservationService : IReservationService
 {
     private readonly ApplicationDbContext _db;
-
     private const int TEST_MERCHANT_ID = 1;
 
     public ReservationService(ApplicationDbContext db)
@@ -41,45 +40,35 @@ public class ReservationService : IReservationService
             .Include(r => r.Employee)
             .Include(r => r.Customer)
             .Include(r => r.Service)
-            .FirstOrDefaultAsync(r => r.Id == id && r.IsActive);
+            .FirstOrDefaultAsync(r => r.Id == id);
 
         return reservation?.ToDto();
     }
 
     public async Task<ReservationDto> CreateAsync(CreateReservationDto dto)
     {
-        try
+        var service = await _db.Services.FindAsync(dto.ServiceId)
+            ?? throw new Exception("Service not found");
+
+        var utcStart = DateTime.SpecifyKind(dto.StartTime, DateTimeKind.Utc);
+
+        var reservation = new Reservation
         {
-            var service = await _db.Services.FindAsync(dto.ServiceId)
-                ?? throw new Exception("Service not found");
+            CustomerId = dto.CustomerId,
+            EmployeeId = dto.EmployeeId,
+            ServiceId = dto.ServiceId,
+            StartTime = utcStart,
+            EndTime = utcStart.AddMinutes(service.DurationMinutes ?? 60),
+            Status = "Booked",
+            IsActive = true,
+            BookedAt = DateTime.UtcNow
+        };
 
-            var duration = service.DurationMinutes ?? 60;
+        _db.Reservations.Add(reservation);
+        await _db.SaveChangesAsync();
 
-            var reservation = new Reservation
-            {
-                CustomerId = dto.CustomerId,
-                EmployeeId = dto.EmployeeId,
-                ServiceId = dto.ServiceId,
-                StartTime = dto.StartTime,
-                EndTime = dto.StartTime.AddMinutes(duration),
-                Status = "Booked",
-                IsActive = true,
-                BookedAt = DateTime.UtcNow
-            };
-
-            _db.Reservations.Add(reservation);
-            await _db.SaveChangesAsync();
-
-            return reservation.ToDto();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex);
-            throw;
-        }
+        return reservation.ToDto();
     }
-
-
 
     public async Task<ReservationDto?> UpdateAsync(int id, UpdateReservationDto dto)
     {
@@ -96,12 +85,12 @@ public class ReservationService : IReservationService
         if (dto.StartTime.HasValue)
         {
             var utcStart = DateTime.SpecifyKind(dto.StartTime.Value, DateTimeKind.Utc);
-
             reservation.StartTime = utcStart;
-            reservation.EndTime = utcStart.AddMinutes(
-                reservation.Service?.DurationMinutes ?? 0);
-        }
 
+            reservation.EndTime = utcStart.AddMinutes(
+                reservation.Service?.DurationMinutes ?? 60
+            );
+        }
 
         if (dto.Status != null)
             reservation.Status = dto.Status;

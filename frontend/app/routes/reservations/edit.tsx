@@ -21,6 +21,13 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function toDateTimeLocalValue(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export default function EditReservationPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -29,7 +36,7 @@ export default function EditReservationPage() {
   const [employees, setEmployees] = useState<User[]>([]);
 
   const [employeeId, setEmployeeId] = useState("");
-  const [startTime, setStartTime] = useState("");
+  const [startTime, setStartTime] = useState(""); // LOCAL datetime-local string
   const [status, setStatus] = useState("");
 
   const [error, setError] = useState<string | null>(null);
@@ -47,19 +54,18 @@ export default function EditReservationPage() {
           }),
         ]);
 
-        if (!reservationRes.ok) {
-          throw new Error("Failed to load reservation");
-        }
+        if (!reservationRes.ok) throw new Error();
 
-        const reservationJson = await reservationRes.json();
-        const employeesJson = await employeesRes.json();
+        const reservationJson: Reservation = await reservationRes.json();
+        const employeesJson: User[] = await employeesRes.json();
 
         setReservation(reservationJson);
         setEmployees(employeesJson);
-
         setEmployeeId(reservationJson.employeeId ?? "");
-        setStartTime(reservationJson.startTime.slice(0, 16));
         setStatus(reservationJson.status);
+
+        const date = new Date(reservationJson.startTime);
+        setStartTime(toDateTimeLocalValue(date));
       } catch {
         setError("Failed to load reservation data");
       }
@@ -76,27 +82,25 @@ export default function EditReservationPage() {
       const res = await fetch(
         `${import.meta.env.VITE_API_URL}/api/reservations/${id}`,
         {
-            method: "PATCH",
-            headers: {
+          method: "PATCH",
+          headers: {
             "Content-Type": "application/json",
             ...authHeaders(),
-            },
-            body: JSON.stringify({
-            employeeId,
-            startTime,
+          },
+          body: JSON.stringify({
+            employeeId: employeeId || null,
+            // LOCAL datetime → ISO UTC
+            startTime: new Date(startTime).toISOString(),
             status,
-            }),
+          }),
         }
-        );
+      );
 
-
-      if (!res.ok) {
-        throw new Error("Failed to update reservation");
-      }
+      if (!res.ok) throw new Error();
 
       navigate("/reservations");
-    } catch (err: any) {
-      setError(err.message ?? "Error updating reservation");
+    } catch {
+      setError("Failed to update reservation");
     } finally {
       setLoading(false);
     }
@@ -109,7 +113,6 @@ export default function EditReservationPage() {
   return (
     <div className="min-h-screen bg-gray-200 p-6 flex justify-center">
       <div className="w-full max-w-2xl space-y-6">
-
         <div className="bg-gray-300 rounded-md py-3 px-4 text-center font-medium">
           Edit Reservation
         </div>
@@ -121,7 +124,6 @@ export default function EditReservationPage() {
         )}
 
         <div className="bg-gray-300 rounded-md p-6 space-y-6">
-
           <div>
             <label className="block font-medium mb-1">Service</label>
             <div className="bg-gray-400 px-4 py-2 rounded">
@@ -174,7 +176,6 @@ export default function EditReservationPage() {
               <option value="Completed">Completed</option>
             </select>
           </div>
-
         </div>
 
         <div className="flex gap-4">
@@ -193,7 +194,6 @@ export default function EditReservationPage() {
             Cancel
           </button>
         </div>
-
       </div>
     </div>
   );
