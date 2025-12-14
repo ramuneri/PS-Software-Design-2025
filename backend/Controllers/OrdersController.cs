@@ -14,6 +14,12 @@ public record CreateOrderRequest(
     string Note
 );
 
+public record UpdateOrderRequest(
+    string? CustomerIdentifier,
+    IEnumerable<OrderItemDto>? Items,
+    string? Note
+);
+
 [Authorize]
 [ApiController]
 [Route("[controller]")]
@@ -40,5 +46,23 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         ) ?? throw new InvalidOperationException("Could not generate order URI"));
 
         return Created(uri, newOrder);
+    }
+    
+    [HttpPatch("{id}")]
+    public async Task<ActionResult<OrderDto>> UpdateOrder([FromRoute] int id, [FromBody] UpdateOrderRequest request)
+    {
+        var updatedOrder = await orderService.UpdateOrder(id, request.CustomerIdentifier, request.Items, request.Note);
+
+        if (updatedOrder == null) return NotFound();
+
+        return Ok(updatedOrder);
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteOrder([FromRoute] int id)
+    {
+        var success = await orderService.DeleteOrder(id);
+        
+        return success ? NoContent() : NotFound();
     }
 }
