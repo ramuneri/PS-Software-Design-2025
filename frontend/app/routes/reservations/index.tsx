@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ReservationsCalendar from "./calendar";
+
 
 type Reservation = {
   id: number;
@@ -177,6 +179,7 @@ export default function ReservationsPage() {
           ))}
         </div>
 
+
         {/* CREATE */}
         <div className="pt-6">
           <button
@@ -185,6 +188,10 @@ export default function ReservationsPage() {
           >
             Create Reservation
           </button>
+        </div>
+
+        <div className="mt-10">
+          <ReservationsCalendar />
         </div>
 
       </div>
