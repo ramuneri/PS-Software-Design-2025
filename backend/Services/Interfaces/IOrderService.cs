@@ -12,11 +12,9 @@ public interface IOrderService
     public Task<OrderDto?> CancelOrder(int id);
     public Task<bool> DeleteOrder(int id);
 
-    public Task<(PaymentDto? Payment, decimal Change, string? Error)> CreatePaymentForOrder(
-    int orderId,
-    string method,
-    decimal amount,
-    string currency,
-    string? provider
-    );
+    public Task<(OrderDto? Order, decimal? Change, string? PaymentIntentId, bool? Requires3DS, string? Error)>
+        CloseOrderWithPayments(
+            int orderId,
+            List<PaymentRequest> payments,
+            TipRequest? tip);
 }

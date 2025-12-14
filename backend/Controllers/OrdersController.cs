@@ -20,18 +20,6 @@ public record UpdateOrderRequest(
     string? Note
 );
 
-public record CreatePaymentRequest(
-    string Method,
-    decimal Amount,
-    string Currency,
-    string? Provider
-);
-
-public record CreatePaymentResponse(
-    PaymentDto Data,
-    decimal Change
-);
-
 [Authorize]
 [ApiController]
 [Route("[controller]")]
@@ -78,15 +66,7 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         return Ok(updatedOrder);
     }
 
-    [HttpPost("{id:int}/close")]
-    public async Task<ActionResult<OrderDto>> CloseOrder(int id)
-    {
-        var closed = await orderService.CloseOrder(id);
-        if (closed == null) return BadRequest();
-        return Ok(closed);
-    }
-
-
+    
     [HttpPost("{id:int}/cancel")]
     public async Task<ActionResult<OrderDto>> CancelOrder(int id)
     {
@@ -106,23 +86,43 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         return success ? NoContent() : NotFound();
     }
 
-    [HttpPost("{orderId:int}/payments")]
-    public async Task<ActionResult<CreatePaymentResponse>> CreatePaymentForOrder(
-    [FromRoute] int orderId,
-    [FromBody] CreatePaymentRequest request)
+    [HttpPost("{id:int}/close")]
+    public async Task<ActionResult<CloseOrderResponse>> CloseOrder(
+        int id,
+        [FromBody] CloseOrderRequest request)
     {
-        var (payment, change, error) = await orderService.CreatePaymentForOrder(
-            orderId,
-            request.Method,
-            request.Amount,
-            request.Currency,
-            request.Provider
-        );
+        var (order, change, paymentIntentId, requires3DS, error) =
+            await orderService.CloseOrderWithPayments(
+                id,
+                request.Payments,
+                request.Tip
+            );
 
-        if (error == "NOT_FOUND") return NotFound();
-        if (error != null) return BadRequest(error);
+        if (error != null)
+        {
+            // Check if it's 3DS required
+            if (requires3DS == true)
+            {
+                return Ok(new CloseOrderResponse(
+                    Order: null!,
+                    Change: null,
+                    PaymentIntentId: paymentIntentId,
+                    Requires3DS: true
+                ));
+            }
 
-        return StatusCode(StatusCodes.Status201Created, new CreatePaymentResponse(payment!, change));
+            return BadRequest(new { message = error });
+        }
+
+        if (order == null)
+            return NotFound();
+
+        return Ok(new CloseOrderResponse(
+            Order: order,
+            Change: change,
+            PaymentIntentId: paymentIntentId,
+            Requires3DS: requires3DS
+        ));
     }
 
 }

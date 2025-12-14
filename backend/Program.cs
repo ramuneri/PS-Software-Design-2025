@@ -80,6 +80,9 @@ builder.Services.AddScoped<IServicesService, ServicesService>();
 builder.Services.AddScoped<IServiceChargePolicyService, ServiceChargePolicyService>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IPaymentValidationService, PaymentValidationService>();
+builder.Services.AddScoped<IOrderCalculatorService, OrderCalculatorService>();
+builder.Services.AddScoped<IStripePaymentService, StripePaymentService>();
 builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddHttpContextAccessor();
 
