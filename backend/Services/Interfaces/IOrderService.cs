@@ -9,6 +9,7 @@ public interface IOrderService
     public Task<OrderDto?> GetOrder(int id);
     public Task<OrderDto?> CreateOrder(string customerId, string employeeId, IEnumerable<OrderItemDto> orderItems, string note);
     public Task<OrderDto?> UpdateOrder(int id, string? customerIdentifier, IEnumerable<OrderItemDto>? items, string? note);
+    public Task<OrderDto?> CloseOrder(int id);
     public Task<OrderDto?> CancelOrder(int id);
     public Task<bool> DeleteOrder(int id);
 }

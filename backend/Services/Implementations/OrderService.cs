@@ -236,6 +236,22 @@ public class OrderService : IOrderService
         return await GetOrder(id);
     }
 
+    public async Task<OrderDto?> CloseOrder(int id)
+    {
+        var order = await context.Orders.FirstOrDefaultAsync(o => o.Id == id);
+        if (order == null) return null;
+
+        if (order.CancelledAt is not null) return null;
+
+        if (order.ClosedAt is not null) return await GetOrder(id);
+
+        order.ClosedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+
+        return await GetOrder(id);
+    }
+
+
     public async Task<OrderDto?> CancelOrder(int id)
     {
         var order = await context.Orders.FirstOrDefaultAsync(o => o.Id == id);

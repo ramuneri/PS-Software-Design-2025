@@ -9,6 +9,7 @@ type Order = {
     closedAt: string | null;
     cancelledAt: string | null;
     totalAmount: number;
+    status?: number;
 };
 
 export default function OrdersListPage() {
@@ -16,6 +17,27 @@ export default function OrdersListPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showAll, setShowAll] = useState(false);
+
+    const statusLabel = (o: Order) => {
+        if (typeof o.status === "number") {
+            return o.status === 0 ? "Open"
+                : o.status === 1 ? "Closed"
+                    : o.status === 2 ? "Cancelled"
+                        : o.status === 3 ? "Refunded"
+                            : "Unknown";
+        }
+
+        //fallback
+        if (o.cancelledAt) return "Cancelled";
+        if (o.closedAt) return "Closed";
+        return "Open";
+    };
+
+    const isOpen = (o: Order) => statusLabel(o) === "Open";
+
+    const visibleOrders = showAll ? orders : orders.filter(isOpen);
+
 
     useEffect(() => {
         loadOrders();
@@ -74,6 +96,18 @@ export default function OrdersListPage() {
                     <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
                         Orders
                     </div>
+                    <div className="flex items-center gap-3">
+                        <input
+                            id="showAllOrders"
+                            type="checkbox"
+                            checked={showAll}
+                            onChange={(e) => setShowAll(e.target.checked)}
+                            className="h-4 w-4"
+                        />
+                        <label htmlFor="showAllOrders" className="text-gray-700 font-medium">
+                            Show all
+                        </label>
+                    </div>
 
                     {/* Error Display */}
                     {error && (
@@ -89,7 +123,7 @@ export default function OrdersListPage() {
                             <span className="col-span-2">OrderID</span>
                             <span className="col-span-3">Customer</span>
                             <span className="col-span-3">Opened at</span>
-                            <span className="col-span-2 text-center">Canceled</span>
+                            <span className="col-span-2 text-center">Status</span>
                             <span className="col-span-2 text-right">Total</span>
                         </div>
 
@@ -108,7 +142,7 @@ export default function OrdersListPage() {
                             )}
 
                             <div className="space-y-3">
-                                {!loading && orders.map((order) => (
+                                {!loading && visibleOrders.map((order) => (
                                     <div
                                         key={order.id}
                                         onClick={() => handleOrderClick(order.id)}
@@ -122,7 +156,7 @@ export default function OrdersListPage() {
                                             {formatDateTime(order.openedAt)}
                                         </span>
                                         <span className="col-span-2 text-black text-center">
-                                            {order.cancelledAt ? "Yes" : "No"}
+                                            {statusLabel(order)}
                                         </span>
                                         <span className="col-span-2 text-black text-right">
                                             ${order.totalAmount.toFixed(2)}

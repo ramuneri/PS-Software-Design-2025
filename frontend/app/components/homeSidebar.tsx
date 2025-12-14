@@ -50,8 +50,6 @@ export default function Sidebar() {
         links={[
           { name: "View Orders", path: "/orders/view" },
           { name: "Create Order", path: "/orders/create" },
-          { name: "Delete Order", path: "/orders" },
-          { name: "Modify Order", path: "/orders" },
         ]}
       />
       
