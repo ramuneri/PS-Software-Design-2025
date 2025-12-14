@@ -14,6 +14,9 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+const WORK_START_HOUR = 7;
+const WORK_END_HOUR = 20;
+
 function getStartOfWeek(date: Date) {
   const d = new Date(date);
   const day = d.getDay();
@@ -31,7 +34,11 @@ export default function ReservationsCalendar() {
   const [loading, setLoading] = useState(true);
 
   const hours = useMemo(
-    () => Array.from({ length: 12 }, (_, i) => 8 + i), // 08–19
+    () =>
+      Array.from(
+        { length: WORK_END_HOUR - WORK_START_HOUR },
+        (_, i) => WORK_START_HOUR + i
+      ),
     []
   );
 
@@ -71,41 +78,29 @@ export default function ReservationsCalendar() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-200 p-6 space-y-6">
+    <div className="bg-gray-200 p-6 space-y-6">
 
-      {/* WEEK NAVIGATION */}
       <div className="flex items-center justify-center gap-4">
-        <button
-          onClick={prevWeek}
-          className="px-3 py-1 bg-gray-300 hover:bg-gray-400 rounded-md"
-        >
+        <button onClick={prevWeek} className="px-3 py-1 bg-gray-300 rounded">
           ←
         </button>
 
-        <div className="text-black font-medium">
+        <div className="font-medium">
           {weekStart.toLocaleDateString()} –{" "}
           {new Date(weekStart.getTime() + 6 * 86400000).toLocaleDateString()}
         </div>
 
-        <button
-          onClick={nextWeek}
-          className="px-3 py-1 bg-gray-300 hover:bg-gray-400 rounded-md"
-        >
+        <button onClick={nextWeek} className="px-3 py-1 bg-gray-300 rounded">
           →
         </button>
       </div>
 
-      {/* CALENDAR */}
       <div className="overflow-x-auto">
         <div className="grid grid-cols-8 bg-gray-300 rounded-md">
 
-          {/* HEADER ROW */}
           <div />
           {days.map((day) => (
-            <div
-              key={day.toDateString()}
-              className="p-3 text-center font-medium text-black"
-            >
+            <div key={day.toDateString()} className="p-3 text-center font-medium">
               {day.toLocaleDateString(undefined, {
                 weekday: "short",
                 month: "short",
@@ -114,12 +109,9 @@ export default function ReservationsCalendar() {
             </div>
           ))}
 
-          {/* TIME SLOTS */}
           {hours.map((hour) => (
             <div key={hour} className="contents">
-              <div className="p-3 text-sm text-black">
-                {hour}:00
-              </div>
+              <div className="p-3 text-sm">{hour}:00</div>
 
               {days.map((day) => {
                 const matches = reservations.filter((r) => {
@@ -138,7 +130,10 @@ export default function ReservationsCalendar() {
                     {matches.map((r) => (
                       <div
                         key={r.id}
-                        className="absolute inset-1 bg-gray-400 rounded-md p-2 text-xs text-black"
+                        className="absolute inset-1 bg-gray-400 rounded-md p-2 text-xs"
+                        onClick={() =>
+                          navigate(`/reservations/${r.id}/edit`)
+                        }
                       >
                         <div className="font-medium">
                           {r.customerName ?? "Customer"}

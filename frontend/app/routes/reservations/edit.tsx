@@ -21,11 +21,20 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+const WORK_START_HOUR = 7;
+const WORK_END_HOUR = 20;
+
 function toDateTimeLocalValue(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
     date.getDate()
   )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function clampHour(base: string, hour: number) {
+  const d = base ? new Date(base) : new Date();
+  d.setHours(hour, 0, 0, 0);
+  return toDateTimeLocalValue(d);
 }
 
 export default function EditReservationPage() {
@@ -34,183 +43,133 @@ export default function EditReservationPage() {
 
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [employees, setEmployees] = useState<User[]>([]);
-
   const [employeeId, setEmployeeId] = useState("");
-  const [startTime, setStartTime] = useState(""); // LOCAL datetime-local string
+  const [startTime, setStartTime] = useState("");
   const [status, setStatus] = useState("");
-
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [reservationRes, employeesRes] = await Promise.all([
-          fetch(`${import.meta.env.VITE_API_URL}/api/reservations/${id}`, {
-            headers: authHeaders(),
-          }),
-          fetch(`${import.meta.env.VITE_API_URL}/api/users?role=Employee`, {
-            headers: authHeaders(),
-          }),
-        ]);
-
-        if (!reservationRes.ok) throw new Error();
-
-        const reservationJson: Reservation = await reservationRes.json();
-        const employeesJson: User[] = await employeesRes.json();
-
-        setReservation(reservationJson);
-        setEmployees(employeesJson);
-        setEmployeeId(reservationJson.employeeId ?? "");
-        setStatus(reservationJson.status);
-
-        const date = new Date(reservationJson.startTime);
-        setStartTime(toDateTimeLocalValue(date));
-      } catch {
-        setError("Failed to load reservation data");
-      }
-    };
-
-    loadData();
+    Promise.all([
+      fetch(`${import.meta.env.VITE_API_URL}/api/reservations/${id}`, {
+        headers: authHeaders(),
+      }),
+      fetch(`${import.meta.env.VITE_API_URL}/api/users?role=Employee`, {
+        headers: authHeaders(),
+      }),
+    ])
+      .then(async ([r, e]) => {
+        const reservation = await r.json();
+        setReservation(reservation);
+        setEmployees(await e.json());
+        setEmployeeId(reservation.employeeId ?? "");
+        setStatus(reservation.status);
+        setStartTime(
+          toDateTimeLocalValue(new Date(reservation.startTime))
+        );
+      })
+      .catch(() => setError("Failed to load reservation"));
   }, [id]);
 
-  const handleSave = async () => {
-    if (status === "Completed") {
-        setError("Completed reservations cannot be edited");
-        return;
-    }
+    const handleSave = async () => {
+        if (status === "Completed") {
+            setError("Completed reservations cannot be edited");
+            return;
+        }
 
-    try {
-      setLoading(true);
-      setError(null);
+        const selected = new Date(startTime);
+        const hour = selected.getHours();
 
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/reservations/${id}`,
-        {
-          method: "PATCH",
-          headers: {
+        if (hour < WORK_START_HOUR || hour >= WORK_END_HOUR) {
+            setError("Reservations must be between 07:00 and 20:00");
+            return;
+        }
+
+        if (selected < new Date()) {
+            setError("Reservation must be in the future");
+            return;
+        }
+
+        await fetch(`${import.meta.env.VITE_API_URL}/api/reservations/${id}`, {
+            method: "PATCH",
+            headers: {
             "Content-Type": "application/json",
             ...authHeaders(),
-          },
-          body: JSON.stringify({
+            },
+            body: JSON.stringify({
             employeeId: employeeId || null,
-            // LOCAL datetime → ISO UTC
             startTime: new Date(startTime).toISOString(),
             status,
-          }),
-        }
-      );
+            }),
+        });
 
-      if (!res.ok) throw new Error();
+        navigate("/reservations");
+    };
 
-      navigate("/reservations");
-    } catch {
-      setError("Failed to update reservation");
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  if (!reservation) {
-    return <div className="p-6 text-black">Loading…</div>;
-  }
+
+
+  if (!reservation) return <div>Loading…</div>;
 
   return (
     <div className="min-h-screen bg-gray-200 p-6 flex justify-center">
       <div className="w-full max-w-2xl space-y-6">
-        <div className="bg-gray-300 rounded-md py-3 px-4 text-center font-medium">
+
+        <div className="bg-gray-300 py-3 text-center font-medium">
           Edit Reservation
         </div>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
+        {error && <div className="text-red-600">{error}</div>}
 
-        <div className="bg-gray-300 rounded-md p-6 space-y-6">
-          <div>
-            <label className="block font-medium mb-1">Service</label>
-            <div className="bg-gray-400 px-4 py-2 rounded">
-              {reservation.serviceName}
-            </div>
-          </div>
+        <div className="bg-gray-300 p-6 space-y-4">
 
-          <div>
-            <label className="block font-medium mb-1">Customer</label>
-            <div className="bg-gray-400 px-4 py-2 rounded">
-              {reservation.customerName}
-            </div>
-          </div>
+          <div>{reservation.serviceName}</div>
+          <div>{reservation.customerName}</div>
 
-          <div>
-            <label className="block font-medium mb-1">Employee</label>
-            <select
-                value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
-                disabled={status === "Completed"}
-                className={`w-full px-4 py-2 rounded ${
-                    status === "Completed"
-                    ? "bg-gray-300 cursor-not-allowed"
-                    : "bg-gray-400"
-                }`}
-            >
+          <select
+            value={employeeId}
+            onChange={(e) => setEmployeeId(e.target.value)}
+            disabled={status === "Completed"}
+            className="w-full bg-gray-400 p-2 rounded"
+          >
+            <option value="">Employee</option>
+            {employees.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.name || e.email}
+              </option>
+            ))}
+          </select>
 
 
-
-              <option value="">Select employee</option>
-              {employees.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name || e.email}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block font-medium mb-1">Start time</label>
-
-              <input
+            <input
                 type="datetime-local"
                 value={startTime}
                 disabled={status === "Completed"}
                 min={toDateTimeLocalValue(new Date())}
                 onChange={(e) => setStartTime(e.target.value)}
-                className={`w-full px-4 py-2 rounded ${
-                    status === "Completed"
-                    ? "bg-gray-300 cursor-not-allowed"
-                    : "bg-gray-400"
+                className={`w-full bg-gray-400 p-2 rounded ${
+                    status === "Completed" ? "cursor-not-allowed opacity-60" : ""
                 }`}
             />
 
-          </div>
 
-          <div>
-            <label className="block font-medium mb-1">Status</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full bg-gray-400 px-4 py-2 rounded"
-            >
-              <option value="Booked">Booked</option>
-              <option value="Cancelled">Cancelled</option>
-              <option value="Completed">Completed</option>
-            </select>
-          </div>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="w-full bg-gray-400 p-2 rounded"
+          >
+            <option value="Booked">Booked</option>
+            <option value="Cancelled">Cancelled</option>
+            <option value="Completed">Completed</option>
+          </select>
         </div>
 
         <div className="flex gap-4">
-          <button
-            onClick={handleSave}
-            disabled={loading}
-            className="flex-1 bg-gray-300 hover:bg-gray-400 rounded-md py-3 font-medium"
-          >
-            {loading ? "Saving…" : "Save"}
+          <button onClick={handleSave} className="flex-1 bg-gray-300 py-2 rounded">
+            Save
           </button>
-
           <button
             onClick={() => navigate("/reservations")}
-            className="flex-1 bg-gray-300 hover:bg-gray-400 rounded-md py-3 font-medium"
+            className="flex-1 bg-gray-300 py-2 rounded"
           >
             Cancel
           </button>

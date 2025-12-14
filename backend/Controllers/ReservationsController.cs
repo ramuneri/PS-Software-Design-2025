@@ -1,11 +1,13 @@
 using backend.Dtos;
 using backend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace backend.Controllers;
 
 [ApiController]
 [Route("api/reservations")]
+[Authorize]
 public class ReservationsController : ControllerBase
 {
     private readonly IReservationService _service;

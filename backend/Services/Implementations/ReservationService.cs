@@ -51,6 +51,7 @@ public class ReservationService : IReservationService
             ?? throw new Exception("Service not found");
 
         var utcStart = DateTime.SpecifyKind(dto.StartTime, DateTimeKind.Utc);
+        ValidateWorkingHours(utcStart);
 
         var reservation = new Reservation
         {
@@ -127,4 +128,14 @@ public class ReservationService : IReservationService
         await _db.SaveChangesAsync();
         return true;
     }
+
+    private static void ValidateWorkingHours(DateTime startTime)
+    {
+        var hour = startTime.Hour;
+
+        if (hour < 7 || hour >= 20)
+            throw new InvalidOperationException(
+                "Reservations are allowed only between 07:00 and 20:00");
+    }
+
 }
