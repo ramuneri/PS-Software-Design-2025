@@ -6,8 +6,9 @@ type OrderItem = {
     id: number;
     productId: number;
     quantity: number;
-    price: number;
+    itemTotal: number;
     productName?: string;
+    serviceName?: string;
 };
 
 type OrderDetail = {
@@ -257,7 +258,7 @@ export default function OrderViewPage() {
                                                             {item.quantity}
                                                         </span>
                                                         <span className="col-span-3 text-black text-center">
-                                                            ${item.price.toFixed(2)}
+                                                            ${item.itemTotal.toFixed(2)}
                                                         </span>
                                                     </div>
                                                 ))

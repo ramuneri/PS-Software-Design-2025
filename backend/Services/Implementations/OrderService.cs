@@ -106,8 +106,8 @@ public class OrderService : IOrderService
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Service)
-            .Include(o => o.Payments)  // ADDED: Include payments
-            .Include(o => o.OrderTips)  // ADDED: Include tips
+            .Include(o => o.Payments)
+            .Include(o => o.OrderTips)
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (order == null)
@@ -127,7 +127,9 @@ public class OrderService : IOrderService
                 orderItem.OrderId,
                 orderItem.ProductId ?? 0,
                 orderItem.Quantity,
-                itemTotal
+                itemTotal,
+                orderItem.Product?.Name,
+                orderItem.Service?.Name
             ));
         }
 

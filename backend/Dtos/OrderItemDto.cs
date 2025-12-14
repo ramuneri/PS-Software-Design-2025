@@ -5,5 +5,7 @@ public record OrderItemDto(
     int OrderId,
     int ProductId,
     int Quantity,
-    decimal ItemTotal
+    decimal ItemTotal,
+    string? ProductName = null,
+    string? ServiceName = null
 );
