@@ -32,13 +32,14 @@ namespace backend.Data
             var merchant = await SeedMerchantAsync();
 
             var employee = await SeedEmployeeUserAsync(merchant);
+            var customer = await SeedCustomerUserAsync(merchant);
 
             await SeedProductAsync(merchant);
-
             await SeedServiceAsync(merchant);
 
             _logger.LogInformation("Database seeding completed.");
         }
+
 
         private async Task<Merchant> SeedMerchantAsync()
         {
@@ -108,6 +109,42 @@ namespace backend.Data
 
             return user;
         }
+
+        private async Task<User> SeedCustomerUserAsync(Merchant merchant)
+        {
+            const string email = "customer@test.com";
+            const string password = "test123";
+
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    UserName = email,
+                    Email = email,
+                    MerchantId = merchant.MerchantId,
+                    Role = "Customer",
+                    CreatedAt = DateTime.UtcNow,
+                    LastLoginAt = DateTime.UtcNow
+                };
+
+                var result = await _userManager.CreateAsync(user, password);
+
+                if (!result.Succeeded)
+                {
+                    var errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
+                    _logger.LogError("Failed to seed customer user: {Error}", errorMsg);
+                }
+                else
+                {
+                    _logger.LogInformation("Seeded Customer user {Email}", email);
+                }
+            }
+
+            return user;
+        }
+
 
 
 
