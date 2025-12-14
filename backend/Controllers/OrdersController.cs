@@ -58,6 +58,19 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         return Ok(updatedOrder);
     }
 
+    [HttpPost("{id:int}/cancel")]
+    public async Task<IActionResult> CancelOrder(int id)
+    {
+        var cancelled = await orderService.CancelOrder(id);
+
+        if (cancelled == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(cancelled);
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteOrder([FromRoute] int id)
     {
