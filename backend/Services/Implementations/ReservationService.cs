@@ -95,10 +95,13 @@ public class ReservationService : IReservationService
 
         if (dto.StartTime.HasValue)
         {
-            reservation.StartTime = dto.StartTime;
-            reservation.EndTime = dto.StartTime.Value.AddMinutes(
+            var utcStart = DateTime.SpecifyKind(dto.StartTime.Value, DateTimeKind.Utc);
+
+            reservation.StartTime = utcStart;
+            reservation.EndTime = utcStart.AddMinutes(
                 reservation.Service?.DurationMinutes ?? 0);
         }
+
 
         if (dto.Status != null)
             reservation.Status = dto.Status;
