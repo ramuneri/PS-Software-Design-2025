@@ -1,8 +1,8 @@
-
 using backend.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 
 namespace backend.Controllers;
@@ -34,20 +34,28 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         => Ok(await orderService.GetOrder(id));
 
     [HttpPost]
-    public async Task<ActionResult<OrderDto?>> CreateOrder([FromBody] CreateOrderRequest request)
+    public async Task<IActionResult> CreateOrder(CreateOrderRequest request)
     {
-        var newOrder = await orderService.CreateOrder(request.CustomerIdentifier, request.EmployeeId, request.Items, request.Note);
+        var employeeId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue("sub");
 
-        if (newOrder == null) return BadRequest();
+        if (employeeId == null)
+            return Unauthorized();
 
-        var uri = new Uri(Url.Link(
-            nameof(GetOrder),
-            new { id = newOrder.Id }
-        ) ?? throw new InvalidOperationException("Could not generate order URI"));
+        var order = await orderService.CreateOrder(
+            request.CustomerIdentifier,
+            employeeId,
+            request.Items,
+            request.Note);
 
-        return Created(uri, newOrder);
+        if (order == null)
+            return BadRequest();
+
+        return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
     }
-    
+
+
     [HttpPatch("{id}")]
     public async Task<ActionResult<OrderDto>> UpdateOrder([FromRoute] int id, [FromBody] UpdateOrderRequest request)
     {
@@ -56,6 +64,26 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         if (updatedOrder == null) return NotFound();
 
         return Ok(updatedOrder);
+    }
+
+    [HttpPost("{id:int}/close")]
+    public async Task<ActionResult<OrderDto>> CloseOrder(int id)
+    {
+        var closed = await orderService.CloseOrder(id);
+        if (closed == null) return BadRequest();
+        return Ok(closed);
+    }
+
+
+    [HttpPost("{id:int}/cancel")]
+    public async Task<ActionResult<OrderDto>> CancelOrder(int id)
+    {
+        var cancelledOrder = await orderService.CancelOrder(id);
+
+        if (cancelledOrder == null)
+            return NotFound();
+
+        return Ok(cancelledOrder);
     }
 
     [HttpDelete("{id}")]
