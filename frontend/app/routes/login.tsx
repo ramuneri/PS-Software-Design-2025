@@ -1,29 +1,41 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useOutletContext } from "react-router";
+import { API_URL } from "~/api";
 
 export default function Login() {
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
-    const navigate = useNavigate()
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState<string | null>(null);
+    const navigate = useNavigate();
     const { setUser } = useOutletContext<{ setUser: React.Dispatch<React.SetStateAction<{ name?: string; email: string } | null>> }>();
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        setError(null);
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password }),
-            credentials: "include"
-        });
+        try {
+            const response = await fetch(`${API_URL}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+                credentials: "include"
+            });
 
-        if (response.ok) {
-            const result = await response.json();
-            localStorage.setItem("access-token", result.accessToken);
-            localStorage.setItem("user", JSON.stringify(result.user));
-            setUser(result.user)
-            navigate("/", { replace: true });
+            if (response.ok) {
+                const result = await response.json();
+                localStorage.setItem("access-token", result.accessToken);
+                localStorage.setItem("user", JSON.stringify(result.user));
+                setUser(result.user);
+                navigate("/", { replace: true });
+                return;
+            }
+
+            const result = await response.json().catch(() => null);
+            setError(result?.message ?? "Login failed. Please check your email and password.");
+        } catch (err) {
+            console.error(err);
+            setError("Could not reach the server. Is the backend running?");
         }
     };
 
@@ -69,10 +81,11 @@ export default function Login() {
 
                     <button
                         type="submit"
-                        className="w-48 bg-gray-400 text-black font-medium py-2 rounded-md hover:bg-gray-500"
+                            className="w-48 bg-gray-400 text-black font-medium py-2 rounded-md hover:bg-gray-500"
                     >
                         Login
                     </button>
+                    {error && <p className="text-red-600 text-xs text-left">{error}</p>}
                 </form>
             </div>
         </div>

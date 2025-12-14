@@ -1,4 +1,7 @@
 
+export const API_URL =
+  (import.meta.env.VITE_API_URL ?? "https://localhost:7035").replace(/\/$/, "");
+
 export async function apiFetch(url: string, options: RequestInit = {}) {
     const token = localStorage.getItem("access-token");
 
@@ -13,7 +16,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     });
     
     if (res.status === 401) {
-        const refreshResult = await fetch(`${import.meta.env.VITE_API_URL}/auth/refresh`, {
+        const refreshResult = await fetch(`${API_URL}/auth/refresh`, {
             method: "POST",
             credentials: "include",
         });

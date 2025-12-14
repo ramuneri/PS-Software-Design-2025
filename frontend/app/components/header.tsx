@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router";
+import { API_URL } from "~/api";
 
 interface HeaderProps {
     userName?: string;
@@ -28,7 +29,7 @@ export default function Header({ userName, email, setUser }: HeaderProps) {
     const handleLogout = async () => {
         try {
             const token = localStorage.getItem("access-token");
-            await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
+            await fetch(`${API_URL}/auth/logout`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
