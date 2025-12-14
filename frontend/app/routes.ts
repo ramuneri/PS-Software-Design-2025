@@ -26,6 +26,11 @@ export default [
     route("service-charge-policies/create", "routes/serviceChargePolicies/create.tsx"),
     route("service-charge-policies/:id/edit", "routes/serviceChargePolicies/edit.tsx"),
 
+    route("reservations", "routes/reservations/index.tsx"),
+    route("reservations/create", "routes/reservations/create.tsx"),
+    route("reservations/:id/edit", "routes/reservations/edit.tsx"),
+    route("reservations/calendar", "routes/reservations/calendar.tsx"),
+    
     
     route("example", "routes/example.tsx"),
     route("debug", "routes/debug.tsx"),
