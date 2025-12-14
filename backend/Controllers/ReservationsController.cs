@@ -52,6 +52,11 @@ public class ReservationsController : ControllerBase
         return updated == null ? NotFound() : Ok(updated);
     }
 
+    [HttpPost("{id:int}/cancel")]
+    public async Task<IActionResult> CancelExplicit(int id)
+    => await _service.CancelAsync(id) ? NoContent() : NotFound();
+
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Cancel(int id)
         => await _service.CancelAsync(id) ? NoContent() : NotFound();

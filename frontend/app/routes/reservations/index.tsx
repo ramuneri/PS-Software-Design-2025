@@ -96,6 +96,20 @@ export default function ReservationsPage() {
           Reservations
         </div>
 
+        <div className="mt-10">
+          <ReservationsCalendar />
+        </div>
+
+        {/* CREATE */}
+        <div className="pt-6">
+          <button
+            onClick={() => navigate("/reservations/create")}
+            className="w-48 bg-gray-400 hover:bg-gray-500 rounded-md py-2 text-black"
+          >
+            Create Reservation
+          </button>
+        </div>
+
         {/* SHOW INACTIVE */}
         <div className="flex items-center gap-3">
           <input
@@ -105,6 +119,7 @@ export default function ReservationsPage() {
           />
           <span className="text-black">Show inactive</span>
         </div>
+
 
         {/* TABLE HEADER */}
         <div className="grid grid-cols-7 px-4 text-sm font-medium text-black">
@@ -177,21 +192,6 @@ export default function ReservationsPage() {
               </div>
             </div>
           ))}
-        </div>
-
-
-        {/* CREATE */}
-        <div className="pt-6">
-          <button
-            onClick={() => navigate("/reservations/create")}
-            className="w-48 bg-gray-400 hover:bg-gray-500 rounded-md py-2 text-black"
-          >
-            Create Reservation
-          </button>
-        </div>
-
-        <div className="mt-10">
-          <ReservationsCalendar />
         </div>
 
       </div>
