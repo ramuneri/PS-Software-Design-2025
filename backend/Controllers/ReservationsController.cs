@@ -1,7 +1,8 @@
 using backend.Dtos;
+using backend.Exceptions;
 using backend.Services.Interfaces;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
 
@@ -35,12 +36,19 @@ public class ReservationsController : ControllerBase
     public async Task<ActionResult<ReservationDto>> Create(
         [FromBody] CreateReservationDto dto)
     {
-        var created = await _service.CreateAsync(dto);
+        try
+        {
+            var created = await _service.CreateAsync(dto);
 
-        return CreatedAtAction(
-            nameof(GetById),
-            new { id = created.Id },
-            created);
+            return CreatedAtAction(
+                nameof(GetById),
+                new { id = created.Id },
+                created);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return Conflict(ex.Message);
+        }
     }
 
     [HttpPatch("{id:int}")]
@@ -48,14 +56,24 @@ public class ReservationsController : ControllerBase
         int id,
         [FromBody] UpdateReservationDto dto)
     {
-        var updated = await _service.UpdateAsync(id, dto);
-        return updated == null ? NotFound() : Ok(updated);
+        try
+        {
+            var updated = await _service.UpdateAsync(id, dto);
+
+            if (updated == null)
+                return NotFound();
+
+            return Ok(updated);
+        }
+        catch (BusinessRuleException ex)
+        {
+            return Conflict(ex.Message);
+        }
     }
 
     [HttpPost("{id:int}/cancel")]
     public async Task<IActionResult> CancelExplicit(int id)
-    => await _service.CancelAsync(id) ? NoContent() : NotFound();
-
+        => await _service.CancelAsync(id) ? NoContent() : NotFound();
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Cancel(int id)
