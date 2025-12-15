@@ -199,6 +199,12 @@ export default function OrderCheckoutPage() {
         return changeAmount > 0 ? changeAmount : null;
     }, [method, amountPaid, amountDue]);
 
+    useEffect(() => {
+        if (method === "CASH") {
+            setAmountPaid(amountDue.toFixed(2));
+        }
+    }, [amountDue, method]);
+
     const handlePayAndClose = async () => {
         if (!id || !order) return;
 
