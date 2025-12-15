@@ -75,4 +75,32 @@ public class UsersController : ControllerBase
         return Ok(user);
     }
 
+    [HttpPatch("{id}")]
+    public async Task<IActionResult> UpdateUser(
+    string id,
+    [FromBody] UpdateUserDto dto)
+    {
+        var user = await _db.Users.FindAsync(id);
+        if (user == null)
+            return NotFound();
+
+        if (dto.Name != null)
+            user.Name = dto.Name;
+
+        if (dto.Surname != null)
+            user.Surname = dto.Surname;
+
+        if (dto.PhoneNumber != null)
+            user.PhoneNumber = dto.PhoneNumber;
+
+        if (dto.Role != null)
+            user.Role = dto.Role;
+
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+
 }
