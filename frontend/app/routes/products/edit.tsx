@@ -7,6 +7,7 @@ export default function ProductEdit() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
+  const [taxCategories, setTaxCategories] = useState<{ id: number; name: string }[]>([]);
   const [form, setForm] = useState<any>(null);
 
   // Load product data
@@ -15,12 +16,11 @@ export default function ProductEdit() {
       try {
         setLoading(true);
 
-        const res = await apiFetch(
-          `${import.meta.env.VITE_API_URL}/api/products/${id}`
-        );
+        const res = await apiFetch(`${import.meta.env.VITE_API_URL}/api/products/${id}`);
         const json = await res.json();
+        const product = json.data ?? json;
 
-        if (!json) {
+        if (!product || !product.id) {
           alert("Product not found.");
           navigate("/products");
           return;
@@ -28,13 +28,18 @@ export default function ProductEdit() {
 
         // Backend returns ProductDto => rename ProductId → id
         setForm({
-          id: json.id,
-          name: json.name,
-          price: json.price,
-          category: json.category,
-          isActive: json.isActive,
-          taxCategoryId: json.taxCategoryId ?? null,
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          category: product.category,
+          isActive: product.isActive,
+          taxCategoryId: product.taxCategoryId ?? null,
         });
+
+        const catRes = await apiFetch(`${import.meta.env.VITE_API_URL}/tax/categories`);
+        const catJson = await catRes.json();
+        const data = Array.isArray(catJson.data) ? catJson.data : catJson.data?.data || [];
+        setTaxCategories(data);
 
         setLoading(false);
       } catch (error) {
@@ -60,11 +65,12 @@ export default function ProductEdit() {
 
     await apiFetch(`${import.meta.env.VITE_API_URL}/api/products/${id}`, {
       method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: form.name,
         price: form.price,
         category: form.category,
-        taxCategoryId: form.taxCategoryId, // currently null
+        taxCategoryId: form.taxCategoryId,
         isActive: form.isActive,
       }),
     });
@@ -124,7 +130,6 @@ export default function ProductEdit() {
           </div>
 
           {/* TAX CATEGORY — disabled for now */}
-          {/* 
           <div>
             <label className="block mb-1 text-sm">Tax Category</label>
             <select
@@ -138,9 +143,13 @@ export default function ProductEdit() {
               }
             >
               <option value="">No Tax Category</option>
+              {taxCategories.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
             </select>
           </div>
-          */}
 
           {/* ACTIVE STATUS */}
           <div>

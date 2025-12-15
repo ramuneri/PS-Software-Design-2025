@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../api";
 
@@ -17,6 +17,20 @@ export default function ProductCreate() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const res = await apiFetch(`${import.meta.env.VITE_API_URL}/tax/categories`);
+        const json = await res.json();
+        const data = Array.isArray(json.data) ? json.data : json.data?.data || [];
+        setTaxCategories(data);
+      } catch (err) {
+        console.error("Failed to load tax categories", err);
+      }
+    }
+    loadCategories();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -26,13 +40,14 @@ export default function ProductCreate() {
       name: form.name,
       price: form.price ? Number(form.price) : null,
       category: form.category || null,
-      taxCategoryId: null, // ignore UI for now - taxes notr done yet
+      taxCategoryId: form.taxCategoryId,
       isActive: true,
     };
 
     try {
       await apiFetch(`${import.meta.env.VITE_API_URL}/api/products`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
