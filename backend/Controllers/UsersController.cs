@@ -21,8 +21,7 @@ public class UsersController : ControllerBase
     // GET /api/users?role=Employee
     // GET /api/users?role=Customer
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<UserListDto>>> GetUsers(
-        [FromQuery] string role)
+    public async Task<ActionResult<IEnumerable<UserListDto>>> GetUsers([FromQuery] string role)
     {
         var users = await _db.Users
             .Where(u =>
