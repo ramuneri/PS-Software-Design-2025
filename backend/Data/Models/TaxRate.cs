@@ -13,5 +13,8 @@ public class TaxRate
     public DateTime EffectiveFrom { get; set; }
     public DateTime? EffectiveTo { get; set; }
 
+    public bool IsActive { get; set; } = true;
+    public DateTime? DeletedAt { get; set; }
+
     public TaxCategories TaxCategory { get; set; } = null!;
 }

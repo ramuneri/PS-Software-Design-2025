@@ -5,5 +5,6 @@ public record TaxRateDto(
     int TaxCategoryId,
     decimal RatePercent,
     DateTime EffectiveFrom,
-    DateTime? EffectiveTo
+    DateTime? EffectiveTo,
+    bool IsActive = true
 );
