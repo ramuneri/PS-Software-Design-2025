@@ -3,7 +3,9 @@ namespace backend.Dtos;
 // Main request for closing order with payments
 public record CloseOrderRequest(
     List<PaymentRequest> Payments,
-    TipRequest? Tip = null
+    TipRequest? Tip = null,
+    decimal? DiscountAmount = null,
+    decimal? ServiceChargeAmount = null
 );
 
 // Individual payment within close order request
@@ -12,7 +14,8 @@ public record PaymentRequest(
     decimal Amount,
     string Currency,
     string? Provider = null, // Required for CARD (e.g., "STRIPE")
-    string? IdempotencyKey = null // Required for CARD to prevent double-charge
+    string? IdempotencyKey = null, // Required for CARD to prevent double-charge
+    string? GiftCardCode = null // Required for GIFT_CARD
 );
 
 // Tip information

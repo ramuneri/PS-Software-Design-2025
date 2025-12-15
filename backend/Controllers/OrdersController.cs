@@ -95,7 +95,9 @@ public class OrdersController(IOrderService orderService) : ControllerBase
             await orderService.CloseOrderWithPayments(
                 id,
                 request.Payments,
-                request.Tip
+                request.Tip,
+                request.DiscountAmount,
+                request.ServiceChargeAmount
             );
 
         if (error != null)

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
 type OrderItemDetail = {
@@ -39,17 +39,8 @@ type OrderDetail = {
 type PaymentMethod = "CASH" | "CARD" | "GIFT_CARD";
 type TipType = "percentage" | "custom";
 
-const discountOptions: { id: string; label: string; percent: number }[] = [
-    { id: "DISCOUNT_1", label: "Discount 1 (placeholder)", percent: 5 },
-    { id: "DISCOUNT_2", label: "Discount 2 (placeholder)", percent: 5 },
-    { id: "DISCOUNT_3", label: "Discount 3 (placeholder)", percent: 5 },
-    { id: "DISCOUNT_4", label: "Discount 4 (placeholder)", percent: 5 },
-];
-
-const serviceChargeOptions: { id: string; label: string; percent: number }[] = [
+const defaultServiceChargeOptions: { id: string; label: string; percent: number }[] = [
     { id: "", label: "No service charge", percent: 0 },
-    { id: "SERVICE_10", label: "Service 10% (placeholder)", percent: 10 },
-    { id: "SERVICE_15", label: "Service 15% (placeholder)", percent: 15 },
 ];
 
 function isOpen(order: OrderDetail) {
@@ -84,9 +75,46 @@ export default function OrderCheckoutPage() {
     const [paying, setPaying] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Discounts and Service Charges from API
+    const [discountOptions, setDiscountOptions] = useState<{ id: string; label: string; percent: number }[]>([]);
+    const [serviceChargeOptions, setServiceChargeOptions] = useState<{ id: string; label: string; percent: number }[]>(defaultServiceChargeOptions);
+
+    // Gift card validation
+    const [giftCardValidation, setGiftCardValidation] = useState<{
+        isValid: boolean;
+        message: string;
+        balance?: number;
+    } | null>(null);
+    const [giftCardValidating, setGiftCardValidating] = useState(false);
+    const giftCardValidationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
     useEffect(() => {
         loadOrder();
+        loadDiscounts();
+        loadServiceCharges();
     }, [id]);
+
+    useEffect(() => {
+        if (!giftCardCode.trim()) {
+            setGiftCardValidation(null);
+            return;
+        }
+
+        if (giftCardValidationTimeoutRef.current) {
+            clearTimeout(giftCardValidationTimeoutRef.current);
+        }
+
+        setGiftCardValidating(true);
+        giftCardValidationTimeoutRef.current = setTimeout(() => {
+            validateGiftCard();
+        }, 500);
+
+        return () => {
+            if (giftCardValidationTimeoutRef.current) {
+                clearTimeout(giftCardValidationTimeoutRef.current);
+            }
+        };
+    }, [giftCardCode]);
 
     const loadOrder = async () => {
         if (!id) return;
@@ -128,6 +156,134 @@ export default function OrderCheckoutPage() {
             setError(err.message ?? "Unknown error loading order");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadDiscounts = async () => {
+        try {
+            const token = localStorage.getItem("access-token");
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/api/discounts?isActive=true`,
+                {
+                    headers: token
+                        ? { Authorization: `Bearer ${token}` }
+                        : {},
+                }
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                const discounts = Array.isArray(data) ? data : data.data || [];
+                const formatted = discounts.map((d: any) => ({
+                    id: String(d.id),
+                    label: d.name,
+                    percent: Number(d.value) || 0,
+                }));
+                setDiscountOptions(formatted);
+            }
+        } catch (err) {
+            console.error("Failed to load discounts", err);
+        }
+    };
+
+    const loadServiceCharges = async () => {
+        try {
+            const token = localStorage.getItem("access-token");
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/api/service-charge-policies?merchantId=1&includeInactive=false`,
+                {
+                    headers: token
+                        ? { Authorization: `Bearer ${token}` }
+                        : {},
+                }
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                const policies = Array.isArray(data) ? data : data.data || [];
+                const formatted = policies.map((p: any) => ({
+                    id: String(p.id),
+                    label: p.name,
+                    percent: Number(p.value) || 0,
+                }));
+                setServiceChargeOptions([defaultServiceChargeOptions[0], ...formatted]);
+            }
+        } catch (err) {
+            console.error("Failed to load service charges", err);
+        }
+    };
+
+    const validateGiftCard = async () => {
+        try {
+            const token = localStorage.getItem("access-token");
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL}/api/giftcards?code=${encodeURIComponent(giftCardCode)}`,
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Merchant-Id": "1",
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                }
+            );
+
+            setGiftCardValidating(false);
+
+            if (!response.ok) {
+                setGiftCardValidation({
+                    isValid: false,
+                    message: response.status === 404 ? "Gift card code not found" : "Gift card not found or invalid",
+                });
+                return;
+            }
+
+            const data = await response.json();
+            const giftcard = data.data && data.data[0];
+
+            if (!giftcard) {
+                setGiftCardValidation({
+                    isValid: false,
+                    message: "",
+                });
+                return;
+            }
+
+            if (!giftcard.isActive) {
+                setGiftCardValidation({
+                    isValid: false,
+                    message: "Gift card is inactive",
+                });
+                return;
+            }
+
+            if (giftcard.expiresAt && new Date(giftcard.expiresAt) < new Date()) {
+                setGiftCardValidation({
+                    isValid: false,
+                    message: "Gift card has expired",
+                });
+                return;
+            }
+
+            if (giftcard.balance < amountDue) {
+                setGiftCardValidation({
+                    isValid: false,
+                    message: `Insufficient balance. Available: €${giftcard.balance.toFixed(2)}, Required: €${amountDue.toFixed(2)}`,
+                    balance: giftcard.balance,
+                });
+                return;
+            }
+
+            setGiftCardValidation({
+                isValid: true,
+                message: `Gift card valid. Balance: €${giftcard.balance.toFixed(2)}`,
+                balance: giftcard.balance,
+            });
+        } catch (err: any) {
+            setGiftCardValidating(false);
+            setGiftCardValidation({
+                isValid: false,
+                message: "Error validating gift card",
+            });
         }
     };
 
@@ -202,8 +358,10 @@ export default function OrderCheckoutPage() {
     useEffect(() => {
         if (method === "CASH") {
             setAmountPaid(amountDue.toFixed(2));
+        } else if (method === "GIFT_CARD") {
+            setAmountPaid(amountDue.toFixed(2));
         }
-    }, [amountDue, method]);
+    }, [amountDue, remaining, method]);
 
     const handlePayAndClose = async () => {
         if (!id || !order) return;
@@ -256,6 +414,8 @@ export default function OrderCheckoutPage() {
 
             const payload: any = {
                 payments: [payment],
+                discountAmount: discountAmount > 0 ? discountAmount : null,
+                serviceChargeAmount: serviceChargeAmount > 0 ? serviceChargeAmount : null,
             };
 
             if (tipAmount > 0) {
@@ -448,9 +608,11 @@ export default function OrderCheckoutPage() {
                                         onChange={(e) => setSelectedServiceCharge(e.target.value)}
                                         disabled={paying}
                                     >
-                                        <option value="">No service charge</option>
-                                        <option value="SERVICE_10">Service 10% (placeholder)</option>
-                                        <option value="SERVICE_15">Service 15% (placeholder)</option>
+                                        {serviceChargeOptions.map((opt) => (
+                                            <option key={opt.id} value={opt.id}>
+                                                {opt.label} {opt.percent > 0 ? `(${opt.percent}%)` : ""}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
 
@@ -695,18 +857,42 @@ export default function OrderCheckoutPage() {
                                         )}
 
                                         {method === "GIFT_CARD" && (
-                                            <div>
+                                            <div className="space-y-2">
                                                 <label className="block text-sm font-medium mb-2 text-gray-800">
                                                     Gift Card Code
                                                 </label>
-                                                <input
-                                                    type="text"
-                                                    className="w-full border border-gray-300 rounded-md px-4 py-2 text-gray-800 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                                                    value={giftCardCode}
-                                                    onChange={(e) => setGiftCardCode(e.target.value)}
-                                                    placeholder="Enter gift card code"
-                                                    disabled={paying}
-                                                />
+                                                <div className="flex gap-2 items-center">
+                                                    <input
+                                                        type="text"
+                                                        className={`flex-1 border rounded-md px-4 py-2 text-gray-800 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 ${
+                                                            giftCardValidation?.isValid
+                                                                ? "border-green-500 focus:ring-green-400"
+                                                                : giftCardValidation?.isValid === false
+                                                                ? "border-red-500 focus:ring-red-400"
+                                                                : "border-gray-300 focus:ring-gray-400"
+                                                        }`}
+                                                        value={giftCardCode}
+                                                        onChange={(e) => setGiftCardCode(e.target.value)}
+                                                        placeholder="Enter gift card code"
+                                                        disabled={paying}
+                                                    />
+                                                    {giftCardValidating && (
+                                                        <span className="text-sm text-gray-600">
+                                                            ✓ Validating...
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {giftCardValidation && giftCardValidation.message && (
+                                                    <div
+                                                        className={`text-xs px-3 py-2 rounded ${
+                                                            giftCardValidation.isValid
+                                                                ? "bg-green-100 text-green-800 border border-green-300"
+                                                                : "bg-red-100 text-red-800 border border-red-300"
+                                                        }`}
+                                                    >
+                                                        {giftCardValidation.message}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 
@@ -724,7 +910,7 @@ export default function OrderCheckoutPage() {
                                                 disabled={
                                                     paying ||
                                                     amountDue <= 0 ||
-                                                    (method === "GIFT_CARD" && !giftCardCode)
+                                                    (method === "GIFT_CARD" && !giftCardValidation?.isValid)
                                                 }
                                             >
                                                 {paying

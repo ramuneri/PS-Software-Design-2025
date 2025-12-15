@@ -5,6 +5,7 @@ namespace backend.Services.Interfaces;
 public interface IOrderCalculatorService
 {
     OrderTotals CalculateOrderTotals(Order order);
+    OrderTotals CalculateOrderTotals(Order order, decimal? discountAmount = null, decimal? serviceChargeAmount = null);
 }
 
 public class OrderTotals

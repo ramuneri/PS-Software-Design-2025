@@ -16,5 +16,7 @@ public interface IOrderService
         CloseOrderWithPayments(
             int orderId,
             List<PaymentRequest> payments,
-            TipRequest? tip);
+            TipRequest? tip,
+            decimal? discountAmount = null,
+            decimal? serviceChargeAmount = null);
 }

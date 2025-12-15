@@ -19,6 +19,7 @@ public class OrderService : IOrderService
     private readonly IOrderCalculatorService orderCalculator;
     private readonly IStripePaymentService stripeService;
     private readonly ITaxService _taxService;
+    private readonly IGiftCardService _giftCardService;
 
     public OrderService(
         ApplicationDbContext context,
@@ -26,7 +27,8 @@ public class OrderService : IOrderService
         IPaymentValidationService paymentValidator,
         IOrderCalculatorService orderCalculator,
         IStripePaymentService stripeService,
-        ITaxService taxService)
+        ITaxService taxService,
+        IGiftCardService giftCardService)
     {
         this.context = context;
         this.productService = productService;
@@ -34,6 +36,7 @@ public class OrderService : IOrderService
         this.orderCalculator = orderCalculator;
         this.stripeService = stripeService;
         _taxService = taxService;
+        _giftCardService = giftCardService;
     }
 
     public async Task<IEnumerable<OrderDto>> GetOrders()
@@ -280,7 +283,9 @@ public class OrderService : IOrderService
     CloseOrderWithPayments(
         int orderId,
         List<PaymentRequest> paymentRequests,
-        TipRequest? tipRequest)
+        TipRequest? tipRequest,
+        decimal? discountAmount = null,
+        decimal? serviceChargeAmount = null)
     {
         using var transaction = await context.Database.BeginTransactionAsync();
 
@@ -306,8 +311,8 @@ public class OrderService : IOrderService
             if (order.CancelledAt != null)
                 return (null, null, null, null, "Cannot close a cancelled order");
 
-            // 3. Calculate order totals
-            var totals = orderCalculator.CalculateOrderTotals(order);
+            // 3. Calculate order totals (with discount and service charge from request)
+            var totals = orderCalculator.CalculateOrderTotals(order, discountAmount, serviceChargeAmount);
 
             if (totals.Remaining <= 0)
                 return (null, null, null, null, "Order is already fully paid");
@@ -325,6 +330,7 @@ public class OrderService : IOrderService
             string? paymentIntentId = null;
             bool? requires3DS = false;
             var remainingBalance = totals.Remaining;
+            var giftcardPaymentRecords = new List<GiftcardPayment>();
 
             foreach (var paymentReq in paymentRequests)
             {
@@ -400,8 +406,62 @@ public class OrderService : IOrderService
                     paymentIntentId = stripeResult.PaymentIntentId;
                     remainingBalance -= paymentAmount;
                 }
-                // Gift card handling
+                else if (method == "GIFT_CARD")
+                {
+                    if (string.IsNullOrWhiteSpace(paymentReq.GiftCardCode))
+                    {
+                        await transaction.RollbackAsync();
+                        return (null, null, null, null, "Gift card code is required");
+                    }
+
+                    var giftcard = await context.Giftcards
+                        .FirstOrDefaultAsync(g => g.Code == paymentReq.GiftCardCode && 
+                                                   g.IsActive && 
+                                                   g.DeletedAt == null &&
+                                                   (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow));
+
+                    if (giftcard == null)
+                    {
+                        await transaction.RollbackAsync();
+                        return (null, null, null, null, "Gift card not found or expired");
+                    }
+
+                    if (giftcard.Balance < paymentAmount)
+                    {
+                        await transaction.RollbackAsync();
+                        return (null, null, null, null, 
+                            $"Insufficient gift card balance. Available: {giftcard.Balance:F2}, Required: {paymentAmount:F2}");
+                    }
+
+                    giftcard.Balance -= paymentAmount;
+                    giftcard.UpdatedAt = DateTime.UtcNow;
+
+                    var giftCardPayment = new Payment
+                    {
+                        OrderId = orderId,
+                        Method = "GIFT_CARD",
+                        Amount = paymentAmount,
+                        Currency = paymentReq.Currency,
+                        Provider = null,
+                        PaymentStatus = "SUCCEEDED"
+                    };
+
+                    context.Payments.Add(giftCardPayment);
+                    await context.SaveChangesAsync();
+
+                    var giftcardPaymentRecord = new GiftcardPayment
+                    {
+                        PaymentId = giftCardPayment.PaymentId,
+                        GiftcardId = giftcard.GiftcardId,
+                        AmountUsed = paymentAmount
+                    };
+                    giftcardPaymentRecords.Add(giftcardPaymentRecord);
+
+                    remainingBalance -= paymentAmount;
+                }
             }
+
+            context.GiftcardPayments.AddRange(giftcardPaymentRecords);
 
             // 6. Record tip if provided
             if (tipRequest != null && tipRequest.Amount > 0)
@@ -442,13 +502,9 @@ public class OrderService : IOrderService
 
         foreach (var orderItem in order.OrderItems)
         {
-            if (orderItem.ProductId == null)
-                continue;
-
-            var product = await productService.GetByIdAsync(orderItem.ProductId.Value);
-
-            if (product != null)
+            if (orderItem.ProductId != null && orderItem.Product != null)
             {
+                var product = orderItem.Product;
                 var itemTotal = product.Price * orderItem.Quantity;
                 subTotal += itemTotal ?? 0;
 
@@ -467,7 +523,35 @@ public class OrderService : IOrderService
                     orderItem.OrderId,
                     orderItem.ProductId ?? 0,
                     orderItem.Quantity,
-                    itemTotal ?? 0
+                    itemTotal ?? 0,
+                    product.Name,
+                    null
+                ));
+            }
+            else if (orderItem.ServiceId != null && orderItem.Service != null)
+            {
+                var service = orderItem.Service;
+                var itemTotal = service.DefaultPrice * orderItem.Quantity;
+                subTotal += itemTotal ?? 0;
+
+                decimal taxRate = 0;
+                if (service.TaxCategoryId.HasValue)
+                {
+                    var at = order.OpenedAt;
+                    taxRate = await _taxService.GetRatePercentAtAsync(service.TaxCategoryId.Value, at);
+                }
+
+                var itemTax = Math.Round((itemTotal ?? 0) * (taxRate / 100m), 2);
+                taxTotal += itemTax;
+
+                orderItemDtos.Add(new OrderItemDto(
+                    orderItem.Id,
+                    orderItem.OrderId,
+                    0,
+                    orderItem.Quantity,
+                    itemTotal ?? 0,
+                    null,
+                    service.Name
                 ));
             }
         }
