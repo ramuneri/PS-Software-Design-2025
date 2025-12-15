@@ -1,4 +1,3 @@
-
 using backend.Dtos;
 
 namespace backend.Services.Interfaces;
@@ -12,4 +11,12 @@ public interface IOrderService
     public Task<OrderDto?> CloseOrder(int id);
     public Task<OrderDto?> CancelOrder(int id);
     public Task<bool> DeleteOrder(int id);
+
+    public Task<(OrderDto? Order, decimal? Change, string? PaymentIntentId, bool? Requires3DS, string? Error)>
+        CloseOrderWithPayments(
+            int orderId,
+            List<PaymentRequest> payments,
+            TipRequest? tip,
+            decimal? discountAmount = null,
+            decimal? serviceChargeAmount = null);
 }
