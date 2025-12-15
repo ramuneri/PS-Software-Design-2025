@@ -33,11 +33,7 @@ function clampHour(base: string, hour: number) {
   return toDateTimeLocalValue(d);
 }
 
-/**
- * Normalizes API responses that may return:
- * - array
- * - { data: array }
- */
+
 function normalizeArray<T>(value: any): T[] {
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.data)) return value.data;
@@ -94,30 +90,19 @@ export default function CreateReservationPage() {
   }, []);
 
 
-  const handleCreate = async () => {
-    if (!serviceId || !employeeId || !customerId || !startTime) {
-      setError("All fields are required");
-      return;
-    }
+const handleCreate = async () => {
+  if (!serviceId || !employeeId || !customerId || !startTime) {
+    setError("All fields are required");
+    return;
+  }
 
-    const selected = new Date(startTime);
-    const hour = selected.getHours();
+  try {
+    setLoading(true);
+    setError(null);
 
-    if (hour < WORK_START_HOUR || hour >= WORK_END_HOUR) {
-      setError("Reservations must be between 07:00 and 20:00");
-      return;
-    }
-
-    if (selected < new Date()) {
-      setError("Reservation must be in the future");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      await fetch(`${import.meta.env.VITE_API_URL}/api/reservations`, {
+    const res = await fetch(
+      `${import.meta.env.VITE_API_URL}/api/reservations`,
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -129,19 +114,34 @@ export default function CreateReservationPage() {
           customerId,
           startTime: new Date(startTime).toISOString(),
         }),
-      });
+      }
+    );
 
-      navigate("/reservations");
-    } catch {
-      setError("Failed to create reservation");
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      const text = await res.text();
+
+      if (text.includes("already has a reservation")) {
+        setError("This employee is already booked at that time.");
+      } else if (text.includes("07:00")) {
+        setError("Reservations are allowed only between 07:00 and 20:00.");
+      } else {
+        setError("Failed to create reservation.");
+      }
+      return;
     }
-  };
+
+    navigate("/reservations");
+  } catch {
+    setError("Failed to create reservation.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
 
   return (
-    <div className="min-h-screen bg-gray-200 p-6 flex justify-center">
+    <div className="min-h-screen text-black bg-gray-200 p-6 flex justify-center">
       <div className="w-full max-w-2xl space-y-6">
 
         <div className="bg-gray-300 py-3 text-center font-medium">

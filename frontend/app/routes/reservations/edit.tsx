@@ -47,6 +47,7 @@ export default function EditReservationPage() {
   const [startTime, setStartTime] = useState("");
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -70,48 +71,58 @@ export default function EditReservationPage() {
       .catch(() => setError("Failed to load reservation"));
   }, [id]);
 
-    const handleSave = async () => {
-        if (status === "Completed") {
-            setError("Completed reservations cannot be edited");
-            return;
-        }
+const handleSave = async () => {
+  if (status === "Completed") {
+    setError("Completed reservations cannot be edited");
+    return;
+  }
 
-        const selected = new Date(startTime);
-        const hour = selected.getHours();
+  try {
+    setLoading(true);
+    setError(null);
 
-        if (hour < WORK_START_HOUR || hour >= WORK_END_HOUR) {
-            setError("Reservations must be between 07:00 and 20:00");
-            return;
-        }
+    const res = await fetch(
+      `${import.meta.env.VITE_API_URL}/api/reservations/${id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({
+          employeeId: employeeId || null,
+          startTime: new Date(startTime).toISOString(),
+          status,
+        }),
+      }
+    );
 
-        if (selected < new Date()) {
-            setError("Reservation must be in the future");
-            return;
-        }
+    if (!res.ok) {
+      const text = await res.text();
 
-        await fetch(`${import.meta.env.VITE_API_URL}/api/reservations/${id}`, {
-            method: "PATCH",
-            headers: {
-            "Content-Type": "application/json",
-            ...authHeaders(),
-            },
-            body: JSON.stringify({
-            employeeId: employeeId || null,
-            startTime: new Date(startTime).toISOString(),
-            status,
-            }),
-        });
+      if (text.includes("already has a reservation")) {
+        setError("This employee is already booked at that time.");
+      } else if (text.includes("07:00")) {
+        setError("Reservations are allowed only between 07:00 and 20:00.");
+      } else {
+        setError("Failed to update reservation.");
+      }
+      return;
+    }
 
-        navigate("/reservations");
-    };
-
-
+    navigate("/reservations");
+  } catch {
+    setError("Failed to update reservation.");
+  } finally {
+    setLoading(false);
+  }
+};
 
 
   if (!reservation) return <div>Loading…</div>;
 
   return (
-    <div className="min-h-screen bg-gray-200 p-6 flex justify-center">
+    <div className="min-h-screen text-black bg-gray-200 p-6 flex justify-center">
       <div className="w-full max-w-2xl space-y-6">
 
         <div className="bg-gray-300 py-3 text-center font-medium">

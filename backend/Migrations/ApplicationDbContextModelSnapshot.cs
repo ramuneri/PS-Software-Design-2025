@@ -886,6 +886,12 @@ namespace backend.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("MerchantId")
                         .HasColumnType("integer");
 
@@ -913,6 +919,12 @@ namespace backend.Migrations
 
                     b.Property<DateTime?>("EffectiveTo")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<decimal>("RatePercent")
                         .HasPrecision(5, 2)

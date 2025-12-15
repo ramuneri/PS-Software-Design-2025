@@ -1,7 +1,8 @@
 using backend.Data;
-using backend.Data.Models;
 using backend.Dtos;
 using backend.Mapping;
+using backend.Exceptions;
+using backend.Data.Models;
 using backend.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -53,13 +54,27 @@ public class ReservationService : IReservationService
         var utcStart = DateTime.SpecifyKind(dto.StartTime, DateTimeKind.Utc);
         ValidateWorkingHours(utcStart);
 
+        var utcEnd = utcStart.AddMinutes(service.DurationMinutes ?? 60);
+
+        if (dto.EmployeeId != null)
+        {
+            var hasOverlap = await HasOverlapAsync(
+                dto.EmployeeId,
+                utcStart,
+                utcEnd
+            );
+
+            if (hasOverlap)
+                throw new BusinessRuleException("Employee already has a reservation during this time");
+        }
+
         var reservation = new Reservation
         {
             CustomerId = dto.CustomerId,
             EmployeeId = dto.EmployeeId,
             ServiceId = dto.ServiceId,
             StartTime = utcStart,
-            EndTime = utcStart.AddMinutes(service.DurationMinutes ?? 60),
+            EndTime = utcEnd,
             Status = "Booked",
             IsActive = true,
             BookedAt = DateTime.UtcNow
@@ -80,18 +95,47 @@ public class ReservationService : IReservationService
         if (reservation == null)
             return null;
 
-        if (dto.EmployeeId != null)
-            reservation.EmployeeId = dto.EmployeeId;
+        // 🔑 Determine FINAL values first
+        var finalEmployeeId = dto.EmployeeId ?? reservation.EmployeeId;
+        DateTime finalStartTime;
 
         if (dto.StartTime.HasValue)
         {
-            var utcStart = DateTime.SpecifyKind(dto.StartTime.Value, DateTimeKind.Utc);
-            reservation.StartTime = utcStart;
-
-            reservation.EndTime = utcStart.AddMinutes(
-                reservation.Service?.DurationMinutes ?? 60
-            );
+            finalStartTime = DateTime.SpecifyKind(dto.StartTime.Value, DateTimeKind.Utc);
         }
+        else if (reservation.StartTime.HasValue)
+        {
+            finalStartTime = reservation.StartTime.Value;
+        }
+        else
+        {
+            throw new BusinessRuleException("Reservation has no start time");
+        }
+
+
+        ValidateWorkingHours(finalStartTime);
+
+        var finalEndTime = finalStartTime.AddMinutes(
+            reservation.Service?.DurationMinutes ?? 60
+        );
+
+        // 🔒 Overlap check if employee exists
+        if (finalEmployeeId != null)
+        {
+            var hasOverlap = await HasOverlapAsync(
+                finalEmployeeId,
+                finalStartTime,
+                finalEndTime,
+                reservation.Id
+            );
+
+            if (hasOverlap)
+                throw new BusinessRuleException("Employee already has a reservation during this time");
+        }
+
+        reservation.EmployeeId = finalEmployeeId;
+        reservation.StartTime = finalStartTime;
+        reservation.EndTime = finalEndTime;
 
         if (dto.Status != null)
             reservation.Status = dto.Status;
@@ -134,8 +178,22 @@ public class ReservationService : IReservationService
         var hour = startTime.Hour;
 
         if (hour < 7 || hour >= 20)
-            throw new InvalidOperationException(
-                "Reservations are allowed only between 07:00 and 20:00");
+            throw new BusinessRuleException("Reservations are allowed only between 07:00 and 20:00");
     }
 
+    private async Task<bool> HasOverlapAsync(
+        string employeeId,
+        DateTime start,
+        DateTime end,
+        int? ignoreReservationId = null
+    )
+    {
+        return await _db.Reservations.AnyAsync(r =>
+            r.EmployeeId == employeeId &&
+            r.IsActive &&
+            (ignoreReservationId == null || r.Id != ignoreReservationId) &&
+            start < r.EndTime &&
+            end > r.StartTime
+        );
+    }
 }

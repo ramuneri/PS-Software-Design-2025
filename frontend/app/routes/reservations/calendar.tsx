@@ -78,7 +78,7 @@ export default function ReservationsCalendar() {
   }
 
   return (
-    <div className="bg-gray-200 p-6 space-y-6">
+    <div className="text-black p-6 space-y-6">
 
       <div className="flex items-center justify-center gap-4">
         <button onClick={prevWeek} className="px-3 py-1 bg-gray-300 rounded">

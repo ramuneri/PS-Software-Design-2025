@@ -31,6 +31,9 @@ export default [
     route("reservations/create", "routes/reservations/create.tsx"),
     route("reservations/:id/edit", "routes/reservations/edit.tsx"),
     route("reservations/calendar", "routes/reservations/calendar.tsx"),
+
+    route("taxes", "routes/taxes/index.tsx"),
+    route("taxes/create", "routes/taxes/create.tsx"),
     
     
     route("example", "routes/example.tsx"),

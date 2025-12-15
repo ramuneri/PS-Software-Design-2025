@@ -11,6 +11,9 @@ public class TaxCategories
 
     public string Name { get; set; } = null!;
 
+    public bool IsActive { get; set; } = true;
+    public DateTime? DeletedAt { get; set; }
+
     public Merchant Merchant { get; set; } = null!;
     public ICollection<TaxRate> TaxRates { get; set; } = new List<TaxRate>();
 }
