@@ -21,8 +21,8 @@ public class ProductsControllerTests : IClassFixture<TestApplicationFactory>
         var response = await _client.GetAsync("/api/products");
         response.EnsureSuccessStatusCode();
 
-        var products = await response.Content.ReadFromJsonAsync<List<ProductDto>>();
-        products.Should().NotBeNull();
+        var payload = await response.Content.ReadFromJsonAsync<DataResponse<List<ProductDto>>>();
+        payload?.Data.Should().NotBeNull();
     }
 
     [Fact]
@@ -42,11 +42,11 @@ public class ProductsControllerTests : IClassFixture<TestApplicationFactory>
         var listResponse = await _client.GetAsync("/api/products");
         listResponse.EnsureSuccessStatusCode();
 
-        var products = await listResponse.Content.ReadFromJsonAsync<List<ProductDto>>();
-        Assert.NotNull(products);
-        Assert.NotEmpty(products);
+        var payload = await listResponse.Content.ReadFromJsonAsync<DataResponse<List<ProductDto>>>();
+        Assert.NotNull(payload?.Data);
+        Assert.NotEmpty(payload.Data);
 
-        var product = products.First();
+        var product = payload.Data.First();
 
         // Act
         var response = await _client.GetAsync($"/api/products/{product.Id}");
@@ -118,3 +118,5 @@ public class ProductsControllerTests : IClassFixture<TestApplicationFactory>
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 }
+
+public record DataResponse<T>(T Data);
