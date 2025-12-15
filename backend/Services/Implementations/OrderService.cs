@@ -312,7 +312,7 @@ public class OrderService : IOrderService
                 return (null, null, null, null, "Cannot close a cancelled order");
 
             // 3. Calculate order totals (with discount and service charge from request)
-            var totals = orderCalculator.CalculateOrderTotals(order, discountAmount, serviceChargeAmount);
+            var totals = await orderCalculator.CalculateOrderTotalsAsync(order, discountAmount, serviceChargeAmount);
 
             if (totals.Remaining <= 0)
                 return (null, null, null, null, "Order is already fully paid");

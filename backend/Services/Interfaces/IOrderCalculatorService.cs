@@ -4,8 +4,8 @@ namespace backend.Services.Interfaces;
 
 public interface IOrderCalculatorService
 {
-    OrderTotals CalculateOrderTotals(Order order);
-    OrderTotals CalculateOrderTotals(Order order, decimal? discountAmount = null, decimal? serviceChargeAmount = null);
+    Task<OrderTotals> CalculateOrderTotalsAsync(Order order);
+    Task<OrderTotals> CalculateOrderTotalsAsync(Order order, decimal? discountAmount = null, decimal? serviceChargeAmount = null);
 }
 
 public class OrderTotals
