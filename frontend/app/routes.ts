@@ -34,8 +34,12 @@ export default [
 
     route("taxes", "routes/taxes/index.tsx"),
     route("taxes/create", "routes/taxes/create.tsx"),
-    
-    
+
+    route("giftcards", "routes/giftcards/index.tsx"),
+    route("giftcards/create", "routes/giftcards/create.tsx"),
+    route("giftcards/view/:id", "routes/giftcards/view.tsx"),
+    route("giftcards/edit/:id", "routes/giftcards/edit.tsx"),
+
     route("example", "routes/example.tsx"),
     route("debug", "routes/debug.tsx"),
   ]),

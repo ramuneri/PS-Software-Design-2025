@@ -66,15 +66,7 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         return Ok(updatedOrder);
     }
 
-    [HttpPost("{id:int}/close")]
-    public async Task<ActionResult<OrderDto>> CloseOrder(int id)
-    {
-        var closed = await orderService.CloseOrder(id);
-        if (closed == null) return BadRequest();
-        return Ok(closed);
-    }
-
-
+    
     [HttpPost("{id:int}/cancel")]
     public async Task<ActionResult<OrderDto>> CancelOrder(int id)
     {
@@ -93,4 +85,46 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         
         return success ? NoContent() : NotFound();
     }
+
+    [HttpPost("{id:int}/close")]
+    public async Task<ActionResult<CloseOrderResponse>> CloseOrder(
+        int id,
+        [FromBody] CloseOrderRequest request)
+    {
+        var (order, change, paymentIntentId, requires3DS, error) =
+            await orderService.CloseOrderWithPayments(
+                id,
+                request.Payments,
+                request.Tip,
+                request.DiscountAmount,
+                request.ServiceChargeAmount
+            );
+
+        if (error != null)
+        {
+            // Check if it's 3DS required
+            if (requires3DS == true)
+            {
+                return Ok(new CloseOrderResponse(
+                    Order: null!,
+                    Change: null,
+                    PaymentIntentId: paymentIntentId,
+                    Requires3DS: true
+                ));
+            }
+
+            return BadRequest(new { message = error });
+        }
+
+        if (order == null)
+            return NotFound();
+
+        return Ok(new CloseOrderResponse(
+            Order: order,
+            Change: change,
+            PaymentIntentId: paymentIntentId,
+            Requires3DS: requires3DS
+        ));
+    }
+
 }
