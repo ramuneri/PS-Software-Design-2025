@@ -12,11 +12,13 @@ public class OrderService : IOrderService
 {
     private readonly ApplicationDbContext context;
     private readonly IProductService productService;
+    private readonly ITaxService _taxService;
 
-    public OrderService(ApplicationDbContext context, IProductService productService)
+    public OrderService(ApplicationDbContext context, IProductService productService, ITaxService taxService)
     {
         this.context = context;
         this.productService = productService;
+        _taxService = taxService;
     }
 
     public async Task<IEnumerable<OrderDto>> GetOrders()
@@ -29,28 +31,8 @@ public class OrderService : IOrderService
 
         foreach (var order in orders)
         {
-            decimal subTotal = 0;
-            var orderItemDtos = new List<OrderItemDto>();
+            var (orderItemDtos, subTotal, taxTotal) = await CalculateTotals(order);
 
-            foreach (var orderItem in order.OrderItems)
-            {
-                var product = await productService.GetByIdAsync(orderItem.ProductId!.Value);
-
-                if (product != null)
-                {
-                    var itemTotal = product.Price * orderItem.Quantity;
-                    subTotal += itemTotal ?? 0;
-
-                    orderItemDtos.Add(new OrderItemDto(
-                        orderItem.Id,
-                        orderItem.OrderId,
-                        orderItem.ProductId ?? 0,
-                        orderItem.Quantity,
-                        itemTotal ?? 0
-                    ));
-                }
-            }
-            
             var status = order.CancelledAt is not null ? Status.Cancelled :
                 order.ClosedAt is not null ? Status.Closed :
                 Status.Open;
@@ -62,8 +44,8 @@ public class OrderService : IOrderService
                 orderItemDtos,
                 null,
                 subTotal,
-                0, // TODO: calculate tax
-                subTotal, // TODO: subTotal + tax
+                taxTotal,
+                subTotal + taxTotal,
                 order.Note,
                 status,
                 order.OpenedAt,
@@ -86,27 +68,7 @@ public class OrderService : IOrderService
             return null;
         }
 
-        decimal subTotal = 0;
-        var orderItemDtos = new List<OrderItemDto>();
-
-        foreach (var orderItem in order.OrderItems)
-        {
-            var product = await productService.GetByIdAsync(orderItem.ProductId!.Value);
-
-            if (product != null)
-            {
-                var itemTotal = product.Price * orderItem.Quantity;
-                subTotal += itemTotal ?? 0;
-
-                orderItemDtos.Add(new OrderItemDto(
-                    orderItem.Id,
-                    orderItem.OrderId,
-                    orderItem.ProductId ?? 0,
-                    orderItem.Quantity,
-                    itemTotal ?? 0
-                ));
-            }
-        }
+        var (orderItemDtos, subTotal, taxTotal) = await CalculateTotals(order);
     
         var status = order.CancelledAt is not null ? Status.Cancelled :
             order.ClosedAt is not null ? Status.Closed :
@@ -119,8 +81,8 @@ public class OrderService : IOrderService
             orderItemDtos,
             null,
             subTotal,
-            0, // TODO: calculate tax
-            subTotal, // TODO: subTotal + tax
+            taxTotal,
+            subTotal + taxTotal,
             order.Note,
             status,
             order.OpenedAt,
@@ -155,27 +117,8 @@ public class OrderService : IOrderService
         await context.OrderItems.AddRangeAsync(orderItemEntities);
         await context.SaveChangesAsync();
 
-        decimal subTotal = 0;
-        var orderItemDtos = new List<OrderItemDto>();
-
-        foreach (var orderItemEntity in orderItemEntities)
-        {
-            var product = await productService.GetByIdAsync(orderItemEntity.ProductId!.Value);
-
-            if (product != null)
-            {
-                var itemTotal = product.Price * orderItemEntity.Quantity;
-                subTotal += itemTotal ?? 0;
-
-                orderItemDtos.Add(new OrderItemDto(
-                    orderItemEntity.Id,
-                    orderItemEntity.OrderId,
-                    orderItemEntity.ProductId ?? 0,
-                    orderItemEntity.Quantity,
-                    subTotal
-                ));
-            }
-        }
+        order.OrderItems = orderItemEntities;
+        var (orderItemDtos, subTotal, taxTotal) = await CalculateTotals(order);
 
         return new OrderDto(
             order.Id,
@@ -184,8 +127,8 @@ public class OrderService : IOrderService
             orderItemDtos,
             null,
             subTotal,
-            0, // TODO: calculate tax
-            subTotal, // TODO: subTotal + tax
+            taxTotal,
+            subTotal + taxTotal,
             note,
             Status.Open,
             order.OpenedAt,
@@ -290,5 +233,46 @@ public class OrderService : IOrderService
         await context.SaveChangesAsync();
 
         return true;
+    }
+
+    private async Task<(List<OrderItemDto> Items, decimal SubTotal, decimal Tax)> CalculateTotals(Order order)
+    {
+        decimal subTotal = 0;
+        decimal taxTotal = 0;
+        var orderItemDtos = new List<OrderItemDto>();
+
+        foreach (var orderItem in order.OrderItems)
+        {
+            if (orderItem.ProductId == null)
+                continue;
+
+            var product = await productService.GetByIdAsync(orderItem.ProductId.Value);
+
+            if (product != null)
+            {
+                var itemTotal = product.Price * orderItem.Quantity;
+                subTotal += itemTotal ?? 0;
+
+                decimal taxRate = 0;
+                if (product.TaxCategoryId.HasValue)
+                {
+                    var at = order.OpenedAt;
+                    taxRate = await _taxService.GetRatePercentAtAsync(product.TaxCategoryId.Value, at);
+                }
+
+                var itemTax = Math.Round((itemTotal ?? 0) * (taxRate / 100m), 2);
+                taxTotal += itemTax;
+
+                orderItemDtos.Add(new OrderItemDto(
+                    orderItem.Id,
+                    orderItem.OrderId,
+                    orderItem.ProductId ?? 0,
+                    orderItem.Quantity,
+                    itemTotal ?? 0
+                ));
+            }
+        }
+
+        return (orderItemDtos, subTotal, taxTotal);
     }
 }

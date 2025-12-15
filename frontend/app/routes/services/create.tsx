@@ -5,7 +5,7 @@ import { apiFetch } from "../../api";
 export default function ServiceCreate() {
   const navigate = useNavigate();
 
-  const [taxCategories, setTaxCategories] = useState<any[]>([]);
+  const [taxCategories, setTaxCategories] = useState<{ id: number; name: string }[]>([]);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -19,11 +19,16 @@ export default function ServiceCreate() {
     async function load() {
       try {
         const res = await apiFetch(
-          `${import.meta.env.VITE_API_URL}/api/tax-categories`
+          `${import.meta.env.VITE_API_URL}/tax/categories`
         );
         const json = await res.json();
 
-        setTaxCategories(Array.isArray(json.data) ? json.data : []);
+        if (Array.isArray(json.data)) {
+          setTaxCategories(json.data);
+        } else if (json.data?.data) {
+          // in case backend wraps twice
+          setTaxCategories(json.data.data);
+        }
       } catch (error) {
         console.error("Failed to load tax categories");
       }

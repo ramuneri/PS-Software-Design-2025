@@ -80,6 +80,7 @@ builder.Services.AddScoped<IServicesService, ServicesService>();
 builder.Services.AddScoped<IServiceChargePolicyService, ServiceChargePolicyService>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ITaxService, TaxService>();
 builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddHttpContextAccessor();
 

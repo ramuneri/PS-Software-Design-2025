@@ -7,7 +7,7 @@ export default function ServiceEdit() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [taxCategories, setTaxCategories] = useState<any[]>([]);
+  const [taxCategories, setTaxCategories] = useState<{ id: number; name: string }[]>([]);
   const [form, setForm] = useState<any>(null);
 
   // Load service + tax categories
@@ -30,13 +30,17 @@ export default function ServiceEdit() {
 
         setForm(json.data);
 
-        // TODO when implemented (Load tax categories)
-        // const taxRes = await apiFetch(
-        //   `${import.meta.env.VITE_API_URL}/api/tax-categories`
-        // );
-        // const taxJson = await taxRes.json();
+        // Load tax categories
+        const taxRes = await apiFetch(
+          `${import.meta.env.VITE_API_URL}/tax/categories`
+        );
+        const taxJson = await taxRes.json();
 
-        // setTaxCategories(Array.isArray(taxJson.data) ? taxJson.data : []);
+        if (Array.isArray(taxJson.data)) {
+          setTaxCategories(taxJson.data);
+        } else if (taxJson.data?.data) {
+          setTaxCategories(taxJson.data.data);
+        }
 
         setLoading(false);
       } catch (error) {
@@ -61,6 +65,7 @@ export default function ServiceEdit() {
 
     await apiFetch(`${import.meta.env.VITE_API_URL}/api/services/${id}`, {
       method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
 
@@ -133,8 +138,8 @@ export default function ServiceEdit() {
             />
           </div>
 
-          {/* TODO TAX CATEGORY */}
-          {/* <div>
+          {/* TAX CATEGORY */}
+          <div>
             <label className="block mb-1 text-sm">Tax Category</label>
             <select
               className="bg-gray-200 p-2 rounded w-full"
@@ -156,7 +161,7 @@ export default function ServiceEdit() {
                 </option>
               ))}
             </select>
-          </div> */}
+          </div>
 
           {/* ACTIVE STATUS */}
           <div>
