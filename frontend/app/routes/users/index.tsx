@@ -193,8 +193,8 @@ export default function UsersListPage() {
                       <span>{u.email}</span>
                       <span>{u.surname ? `${u.name} ${u.surname}` : u.name}</span>
                       <span>{u.phoneNumber ?? "-"}</span>
-                      <span>{u.role}</span>
-                      <span>
+                      <span className="text-center" >{u.role}</span>
+                      <span className="text-right">
                         {formatDateTime(u.lastLoginAt)}
                       </span>
                     </div>
