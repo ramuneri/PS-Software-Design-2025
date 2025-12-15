@@ -1,4 +1,5 @@
 using backend.Data.Models;
+using backend.Dtos;
 using backend.Services.Interfaces;
 
 namespace backend.Services;
@@ -21,6 +22,7 @@ public class OrderCalculatorService : IOrderCalculatorService
 
         decimal subtotal = 0;
         decimal taxTotal = 0;
+        var breakdown = new Dictionary<(int CategoryId, decimal Rate), decimal>();
 
         foreach (var item in order.OrderItems ?? Enumerable.Empty<OrderItem>())
         {
@@ -48,11 +50,23 @@ public class OrderCalculatorService : IOrderCalculatorService
                 var ratePercent = await _taxService.GetRatePercentAtAsync(taxCategoryId.Value, at);
                 var itemTax = Math.Round(itemTotal * (ratePercent / 100m), 2);
                 taxTotal += itemTax;
+
+                var key = (taxCategoryId.Value, ratePercent);
+                breakdown[key] = breakdown.GetValueOrDefault(key) + itemTax;
             }
         }
 
         totals.Subtotal = subtotal;
         totals.Tax = taxTotal;
+        totals.TaxBreakdown = breakdown
+            .Select(kvp => new OrderTaxBreakdownDto
+            {
+                TaxCategoryId = kvp.Key.CategoryId,
+                CategoryName = string.Empty,
+                RatePercent = kvp.Key.Rate,
+                Amount = kvp.Value
+            })
+            .ToList();
 
         totals.Discount = discountAmount ?? 0;
         totals.ServiceCharge = serviceChargeAmount ?? 0;

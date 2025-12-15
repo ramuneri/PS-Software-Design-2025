@@ -39,6 +39,123 @@ public class OrderService : IOrderService
         _giftCardService = giftCardService;
     }
 
+    private record SplitAllocation(
+        int PayerIndex,
+        decimal Subtotal,
+        decimal Tax,
+        decimal Discount,
+        decimal ServiceCharge,
+        decimal Tip,
+        decimal Total,
+        PaymentRequest Payment);
+
+    public async Task<(OrderDto? Order, decimal? Change, string? PaymentIntentId, bool? Requires3DS, string? Error)>
+        CloseOrderWithItemSplits(
+            int orderId,
+            List<SplitPaymentRequest> splits,
+            TipRequest? tipRequest,
+            decimal? discountAmount = null,
+            decimal? serviceChargeAmount = null)
+    {
+        // Load order with related data
+        var order = await context.Orders
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Service)
+            .Include(o => o.Payments)
+            .Include(o => o.OrderTips)
+            .FirstOrDefaultAsync(o => o.Id == orderId);
+
+        if (order == null) return (null, null, null, null, "Order not found");
+        if (order.ClosedAt != null) return (null, null, null, null, "Order is already closed");
+        if (order.CancelledAt != null) return (null, null, null, null, "Cannot close a cancelled order");
+
+        // Calculate overall totals for validation
+        var totals = await orderCalculator.CalculateOrderTotalsAsync(order, discountAmount, serviceChargeAmount);
+        if (totals.Remaining <= 0) return (null, null, null, null, "Order is already fully paid");
+
+        // Build lookup for items
+        var itemLookup = order.OrderItems.ToDictionary(oi => oi.Id);
+
+        // Validate splits cover all items exactly once
+        var assigned = new HashSet<int>();
+        foreach (var split in splits)
+        {
+            foreach (var itemId in split.OrderItemIds)
+            {
+                if (!itemLookup.ContainsKey(itemId))
+                    return (null, null, null, null, $"Order item {itemId} not found");
+                if (!assigned.Add(itemId))
+                    return (null, null, null, null, $"Order item {itemId} assigned multiple times");
+            }
+        }
+        if (assigned.Count != itemLookup.Count)
+            return (null, null, null, null, "Not all items were assigned to a payer");
+
+        // Compute per-item totals (price * qty) and tax
+        decimal grandItems = 0;
+        var itemTotals = new Dictionary<int, (decimal itemTotal, decimal itemTax)>();
+        foreach (var oi in order.OrderItems)
+        {
+            decimal price = oi.Product?.Price ?? oi.Service?.DefaultPrice ?? 0;
+            var itemTotal = price * oi.Quantity;
+            decimal taxRate = 0;
+            if (oi.Product?.TaxCategoryId is int pcid)
+                taxRate = await _taxService.GetRatePercentAtAsync(pcid, order.OpenedAt);
+            else if (oi.Service?.TaxCategoryId is int scid)
+                taxRate = await _taxService.GetRatePercentAtAsync(scid, order.OpenedAt);
+            var itemTax = Math.Round(itemTotal * (taxRate / 100m), 2);
+            itemTotals[oi.Id] = (itemTotal, itemTax);
+            grandItems += itemTotal;
+        }
+
+        if (grandItems <= 0)
+            return (null, null, null, null, "Cannot split zero-value order");
+
+        decimal orderLevelDiscount = discountAmount ?? 0;
+        decimal orderLevelService = serviceChargeAmount ?? 0;
+        decimal orderLevelTip = tipRequest?.Amount ?? 0;
+
+        var allocations = new List<SplitAllocation>();
+        int payerIndex = 0;
+        foreach (var split in splits)
+        {
+            var itemsSubtotal = split.OrderItemIds.Sum(id => itemTotals[id].itemTotal);
+            var itemsTax = split.OrderItemIds.Sum(id => itemTotals[id].itemTax);
+            var factor = itemsSubtotal / grandItems;
+
+            var payerDiscount = Math.Round(orderLevelDiscount * factor, 2);
+            var payerService = Math.Round(orderLevelService * factor, 2);
+            var payerTip = Math.Round(orderLevelTip * factor, 2);
+
+            var payerTotal = itemsSubtotal - payerDiscount + payerService + itemsTax + payerTip;
+
+            allocations.Add(new SplitAllocation(
+                payerIndex,
+                itemsSubtotal,
+                itemsTax,
+                payerDiscount,
+                payerService,
+                payerTip,
+                payerTotal,
+                new PaymentRequest(split.Method, payerTotal, split.Currency, null, null)
+            ));
+            payerIndex++;
+        }
+
+        // Validate total matches required (allow small rounding diff)
+        var totalCollected = allocations.Sum(a => a.Total);
+        var diff = Math.Abs(totalCollected - totals.Remaining);
+        if (diff > 0.02m)
+        {
+            return (null, null, null, null, $"Split totals do not match order. Remaining: {totals.Remaining:F2}, Collected: {totalCollected:F2}");
+        }
+
+        // Reuse CloseOrderWithPayments with computed payment requests
+        var paymentRequests = allocations.Select(a => a.Payment).ToList();
+        return await CloseOrderWithPayments(orderId, paymentRequests, tipRequest, discountAmount, serviceChargeAmount);
+    }
     public async Task<IEnumerable<OrderDto>> GetOrders()
     {
         var orders = await context.Orders
@@ -55,6 +172,19 @@ public class OrderService : IOrderService
         foreach (var order in orders)
         {
             var (orderItemDtos, subTotal, taxTotal) = await CalculateTotals(order);
+            var calcTotals = await orderCalculator.CalculateOrderTotalsAsync(order);
+            if (calcTotals.TaxBreakdown.Any())
+            {
+                var categories = await _taxService.GetCategoriesAsync(includeInactive: true);
+                foreach (var tb in calcTotals.TaxBreakdown)
+                {
+                    var cat = categories.FirstOrDefault(c => c.Id == tb.TaxCategoryId);
+                    if (cat != null)
+                    {
+                        tb.CategoryName = cat.Name;
+                    }
+                }
+            }
 
             var status = order.CancelledAt is not null ? Status.Cancelled :
                 order.ClosedAt is not null ? Status.Closed :
@@ -81,7 +211,8 @@ public class OrderService : IOrderService
                 status,
                 order.OpenedAt,
                 order.ClosedAt,
-                order.CancelledAt
+                order.CancelledAt,
+                calcTotals.TaxBreakdown
             ));
         }
 
@@ -105,6 +236,19 @@ public class OrderService : IOrderService
         }
 
         var (orderItemDtos, subTotal, taxTotal) = await CalculateTotals(order);
+        var calcTotals = await orderCalculator.CalculateOrderTotalsAsync(order);
+        if (calcTotals.TaxBreakdown.Any())
+        {
+            var categories = await _taxService.GetCategoriesAsync(includeInactive: true);
+            foreach (var tb in calcTotals.TaxBreakdown)
+            {
+                var cat = categories.FirstOrDefault(c => c.Id == tb.TaxCategoryId);
+                if (cat != null)
+                {
+                    tb.CategoryName = cat.Name;
+                }
+            }
+        }
 
         var status = order.CancelledAt is not null ? Status.Cancelled :
             order.ClosedAt is not null ? Status.Closed :
@@ -131,7 +275,8 @@ public class OrderService : IOrderService
             status,
             order.OpenedAt,
             order.ClosedAt,
-            order.CancelledAt
+            order.CancelledAt,
+            calcTotals.TaxBreakdown
         );
     }
 
@@ -163,6 +308,7 @@ public class OrderService : IOrderService
 
         order.OrderItems = orderItemEntities;
         var (orderItemDtos, subTotal, taxTotal) = await CalculateTotals(order);
+        var calcTotals = await orderCalculator.CalculateOrderTotalsAsync(order);
 
         return new OrderDto(
             order.Id,
@@ -177,7 +323,8 @@ public class OrderService : IOrderService
             Status.Open,
             order.OpenedAt,
             null,
-            null
+            null,
+            calcTotals.TaxBreakdown
         );
     }
 
