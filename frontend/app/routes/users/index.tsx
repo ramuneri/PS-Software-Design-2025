@@ -9,7 +9,6 @@ type User = {
   phoneNumber?: string | null;
   role: "OWNER" | "MANAGER" | "EMPLOYEE" | string;
   lastLoginAt?: string | null;
-  isActive?: boolean;
 };
 
 function authHeaders(): Record<string, string> {
@@ -43,7 +42,6 @@ export default function UsersListPage() {
   // UI state (matches the mock)
   const [query, setQuery] = useState("");
   const [role, setRole] = useState<string>(""); // "", OWNER, MANAGER, EMPLOYEE
-  const [includeInactive, setIncludeInactive] = useState(false);
 
   // paging (swagger supports limit/offset)
   const [limit] = useState(50);
@@ -56,7 +54,6 @@ export default function UsersListPage() {
 
       const url = new URL(`${import.meta.env.VITE_API_URL}/api/users`);
       if (role) url.searchParams.set("role", role || "Employee"); // TODO:fix this 
-      url.searchParams.set("includeInactive", String(includeInactive));
       url.searchParams.set("limit", String(limit));
       url.searchParams.set("offset", String(offset));
 
@@ -87,10 +84,6 @@ export default function UsersListPage() {
     }
   }
 
-  useEffect(() => {
-    loadUsers();
-    // reload when filters change
-  }, [role, includeInactive]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -121,7 +114,7 @@ export default function UsersListPage() {
 
           {/* Controls row */}
           <div className="bg-gray-300 rounded-md p-4 space-y-3">
-            <div className="text-gray-700 font-medium">Search For specific item</div>
+            <div className="text-black font-medium">Search For specific item</div>
 
             <div className="flex gap-3 items-center">
               <input
@@ -141,7 +134,7 @@ export default function UsersListPage() {
 
             <div className="flex gap-4 items-center">
               <div className="flex items-center gap-2">
-                <span className="text-gray-700 font-medium">Role</span>
+                <span className="font-medium">Role</span>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
@@ -154,14 +147,6 @@ export default function UsersListPage() {
                 </select>
               </div>
 
-              <label className="flex items-center gap-2 text-gray-700 font-medium">
-                <input
-                  type="checkbox"
-                  checked={includeInactive}
-                  onChange={(e) => setIncludeInactive(e.target.checked)}
-                />
-                Include inactive
-              </label>
 
               <button
                 onClick={loadUsers}
@@ -181,7 +166,7 @@ export default function UsersListPage() {
 
           {/* Table */}
           <div className="bg-gray-300 rounded-md flex-1 flex flex-col overflow-hidden">
-            <div className="grid grid-cols-12 gap-4 px-6 py-4 text-gray-600 font-medium border-b border-gray-400">
+            <div className="grid grid-cols-12 gap-4 px-6 py-4 text-black font-medium border-b border-gray-400">
               <span className="col-span-3">Email</span>
               <span className="col-span-3">Name</span>
               <span className="col-span-2">Phone number</span>
@@ -193,7 +178,7 @@ export default function UsersListPage() {
               {loading && <div className=" text-center py-8">Loading users…</div>}
 
               {!loading && filtered.length === 0 && (
-                <div className="text-gray-500 text-center py-8">No users found</div>
+                <div className="text-black text-center py-8">No users found</div>
               )}
 
               <div className="space-y-3">
@@ -201,9 +186,7 @@ export default function UsersListPage() {
                   filtered.map((u) => (
                     <div
                       key={u.id}
-                      className={`grid grid-cols-12 gap-4 px-6 py-4 bg-gray-200 rounded-md items-center ${
-                        u.isActive === false ? "opacity-50" : ""
-                      }`}
+                      className={`grid grid-cols-12 gap-4 px-6 py-4 bg-gray-200 rounded-md items-center`}
                     >
                       <span className="col-span-3">{u.email}</span>
                       <span className="col-span-3">

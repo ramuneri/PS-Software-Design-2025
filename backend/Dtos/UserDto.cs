@@ -9,7 +9,6 @@ public record UserDto(
     string PhoneNumber,
     string Role,
     bool IsSuperAdmin,
-    bool IsActive,
     DateTime LastLoginAt,
     DateTime CreatedAt,
     DateTime UpdatedAt

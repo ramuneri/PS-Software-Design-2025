@@ -62,7 +62,7 @@ public class AuthService : IAuthService
                 PhoneNumber: user.PhoneNumber ?? "",
                 Role: user.Role ?? "Employee",
                 IsSuperAdmin: user.IsSuperAdmin,
-                IsActive: true,
+                // IsActive: true, // If enought time - will add
                 LastLoginAt: user.LastLoginAt,
                 CreatedAt: user.CreatedAt,
                 UpdatedAt: DateTime.UtcNow

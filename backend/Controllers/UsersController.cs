@@ -18,21 +18,31 @@ public class UsersController : ControllerBase
         _db = db;
     }
 
-    // GET /api/users?role=Employee
-    // GET /api/users?role=Customer
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<UserListDto>>> GetUsers([FromQuery] string role)
+    public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers(
+        [FromQuery] string? role)
     {
-        var users = await _db.Users
-            .Where(u =>
-                u.Role == role &&
-                u.MerchantId == TEST_MERCHANT_ID)
-            .Select(u => new UserListDto(
+        var query = _db.Users
+            .Where(u => u.MerchantId == TEST_MERCHANT_ID);
+
+        if (!string.IsNullOrWhiteSpace(role))
+        {
+            query = query.Where(u => u.Role == role);
+        }
+
+        var users = await query
+            .Select(u => new UserDto(
                 u.Id,
+                u.MerchantId,
                 u.Email!,
-                string.IsNullOrWhiteSpace(u.Name)
-                    ? u.Email!
-                    : u.Name
+                u.Name ?? "",
+                u.Surname ?? "",
+                u.PhoneNumber ?? "",
+                u.Role,
+                u.IsSuperAdmin,
+                u.LastLoginAt,
+                u.CreatedAt,
+                u.UpdatedAt
             ))
             .ToListAsync();
 
