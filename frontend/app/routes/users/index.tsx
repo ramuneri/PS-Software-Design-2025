@@ -141,9 +141,10 @@ export default function UsersListPage() {
                   className="bg-gray-200 rounded-md px-3 py-2"
                 >
                   <option value="">All</option>
-                  <option value="OWNER">Owner</option>
-                  <option value="MANAGER">Manager</option>
-                  <option value="EMPLOYEE">Employee</option>
+                  {/* TODO:
+                  <option value="Owner">Owner</option>
+                  <option value="Manager">Manager</option> */}
+                  <option value="Employee">Employee</option>
                 </select>
               </div>
 
@@ -186,15 +187,14 @@ export default function UsersListPage() {
                   filtered.map((u) => (
                     <div
                       key={u.id}
-                      className={`grid grid-cols-12 gap-4 px-6 py-4 bg-gray-200 rounded-md items-center`}
+                      onClick={() => navigate(`/users/${u.id}`)}
+                      className={`grid grid-cols-5 px-6 py-4 bg-gray-200 rounded-md cursor-pointer hover:bg-gray-400 transition`}
                     >
-                      <span className="col-span-3">{u.email}</span>
-                      <span className="col-span-3">
-                        {u.surname ? `${u.name} ${u.surname}` : u.name}
-                      </span>
-                      <span className="col-span-2">{u.phoneNumber ?? "-"}</span>
-                      <span className="col-span-2">{u.role}</span>
-                      <span className="col-span-2 text-right">
+                      <span>{u.email}</span>
+                      <span>{u.surname ? `${u.name} ${u.surname}` : u.name}</span>
+                      <span>{u.phoneNumber ?? "-"}</span>
+                      <span>{u.role}</span>
+                      <span>
                         {formatDateTime(u.lastLoginAt)}
                       </span>
                     </div>

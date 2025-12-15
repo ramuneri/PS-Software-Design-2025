@@ -48,4 +48,31 @@ public class UsersController : ControllerBase
 
         return Ok(users);
     }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<UserDto>> GetUserById(string id)
+    {
+        var user = await _db.Users
+            .Where(u => u.Id == id)
+            .Select(u => new UserDto(
+                u.Id,
+                u.MerchantId,
+                u.Email!,
+                u.Name ?? "",
+                u.Surname ?? "",
+                u.PhoneNumber ?? "",
+                u.Role,
+                u.IsSuperAdmin,
+                u.LastLoginAt,
+                u.CreatedAt,
+                u.UpdatedAt
+            ))
+            .FirstOrDefaultAsync();
+
+        if (user == null)
+            return NotFound();
+
+        return Ok(user);
+    }
+
 }
