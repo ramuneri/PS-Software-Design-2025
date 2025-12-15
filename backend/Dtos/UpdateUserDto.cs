@@ -1,4 +1,3 @@
-
 namespace backend.Dtos;
 
 public record UpdateUserDto(

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-type User = {
+type UserRow = {
   id: string;
   email: string;
   name: string;
-  surname?: string | null;
   phoneNumber?: string | null;
   role: string;
+  isActive: boolean;
   lastLoginAt?: string | null;
 };
 
@@ -35,12 +35,13 @@ function formatDateTime(dateString?: string | null) {
 export default function UsersListPage() {
   const navigate = useNavigate();
 
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
-  const [role, setRole] = useState<string>(""); // "", Employee, Customer
+  const [role, setRole] = useState<string>("");
+  const [includeInactive, setIncludeInactive] = useState(false);
 
   async function loadUsers() {
     try {
@@ -49,6 +50,7 @@ export default function UsersListPage() {
 
       const url = new URL(`${import.meta.env.VITE_API_URL}/api/users`);
       if (role) url.searchParams.set("role", role);
+      url.searchParams.set("includeInactive", includeInactive ? "true" : "false");
 
       const res = await fetch(url.toString(), {
         headers: {
@@ -56,6 +58,13 @@ export default function UsersListPage() {
           ...authHeaders(),
         },
       });
+
+
+      if (res.status === 401) {
+        localStorage.removeItem("access-token");
+        navigate("/login");
+        return;
+      }
 
       if (!res.ok) {
         const txt = await res.text();
@@ -74,14 +83,14 @@ export default function UsersListPage() {
 
   useEffect(() => {
     loadUsers();
-  }, [role]);
+  }, [role, includeInactive]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return users;
 
     return users.filter((u) =>
-      `${u.email} ${u.name} ${u.surname ?? ""} ${u.phoneNumber ?? ""} ${u.role}`
+      `${u.email} ${u.name} ${u.phoneNumber ?? ""} ${u.role}`
         .toLowerCase()
         .includes(q)
     );
@@ -91,13 +100,11 @@ export default function UsersListPage() {
     <div className="bg-gray-200 flex flex-col text-black" style={{ height: "calc(100vh - 52px)" }}>
       <div className="p-6 flex-1 flex flex-col overflow-hidden space-y-6">
 
-        {/* Header */}
         <div className="bg-gray-300 rounded-md py-3 text-center font-medium">
           User List
         </div>
 
-        {/* Filters */}
-        <div className="bg-gray-300 rounded-md p-4 space-y-3">
+        <div className="bg-gray-300 rounded-md p-4 space-y-4">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -105,7 +112,7 @@ export default function UsersListPage() {
             placeholder="Search by email, name, phone, role…"
           />
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
@@ -115,6 +122,15 @@ export default function UsersListPage() {
               <option value="Employee">Employee</option>
               <option value="Customer">Customer</option>
             </select>
+
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={includeInactive}
+                onChange={(e) => setIncludeInactive(e.target.checked)}
+              />
+              <span>Show inactive</span>
+            </label>
 
             <button
               onClick={loadUsers}
@@ -131,13 +147,12 @@ export default function UsersListPage() {
           </div>
         )}
 
-        {/* Table */}
         <div className="bg-gray-300 rounded-md flex-1 overflow-hidden">
           <div className="grid grid-cols-12 px-6 py-4 font-medium border-b border-gray-400">
-            <span className="col-span-3">Email</span>
+            <span className="col-span-4">Email</span>
             <span className="col-span-3">Name</span>
             <span className="col-span-2">Phone</span>
-            <span className="col-span-2 text-center">Role</span>
+            <span className="col-span-1 text-center">Role</span>
             <span className="col-span-2 text-right">Last login</span>
           </div>
 
@@ -153,14 +168,14 @@ export default function UsersListPage() {
                 <div
                   key={u.id}
                   onClick={() => navigate(`/users/${u.id}`)}
-                  className="grid grid-cols-12 px-6 py-4 bg-gray-200 rounded-md cursor-pointer hover:bg-gray-400 transition"
+                  className={`grid grid-cols-12 px-6 py-4 bg-gray-200 rounded-md cursor-pointer hover:bg-gray-400 transition ${
+                    !u.isActive ? "opacity-50" : ""
+                  }`}
                 >
-                  <span className="col-span-3">{u.email}</span>
-                  <span className="col-span-3">
-                    {u.surname ? `${u.name} ${u.surname}` : u.name}
-                  </span>
+                  <span className="col-span-4">{u.email}</span>
+                  <span className="col-span-3">{u.name}</span>
                   <span className="col-span-2">{u.phoneNumber ?? "-"}</span>
-                  <span className="col-span-2 text-center">{u.role}</span>
+                  <span className="col-span-1 text-center">{u.role}</span>
                   <span className="col-span-2 text-right">
                     {formatDateTime(u.lastLoginAt)}
                   </span>

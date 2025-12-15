@@ -8,6 +8,7 @@ type User = {
   surname?: string | null;
   phoneNumber?: string | null;
   role: string;
+  isActive: boolean;
 };
 
 function authHeaders(): Record<string, string> {
@@ -62,6 +63,50 @@ export default function EditUserPage() {
       setSaving(false);
     }
   }
+
+  async function handleDeactivate() {
+    if (!id) return;
+
+    if (!confirm("Are you sure you want to deactivate this user?")) return;
+
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/users/${id}`,
+        {
+          method: "DELETE",
+          headers: authHeaders(),
+        }
+      );
+
+      if (!res.ok) throw new Error();
+
+      navigate("/users");
+    } catch {
+      setError("Failed to deactivate user");
+    }
+  }
+
+  async function handleRestore() {
+    if (!id) return;
+
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/users/${id}/restore`,
+        {
+          method: "POST",
+          headers: authHeaders(),
+        }
+      );
+
+      if (!res.ok) throw new Error();
+
+      navigate(`/users/${id}`);
+    } catch {
+      setError("Failed to restore user");
+    }
+  }
+
+
 
   if (!user) return <div className="p-6">Loading…</div>;
 
@@ -130,6 +175,27 @@ export default function EditUserPage() {
               Cancel
             </button>
           </div>
+
+          {/* DEACTIVATE */}
+          <div className="pt-6 border-t border-gray-400 flex justify-center">
+            {user.isActive ? (
+              <button
+                onClick={handleDeactivate}
+                className="bg-red-400 hover:bg-red-500 px-6 py-2 rounded-md"
+              >
+                Deactivate user
+              </button>
+            ) : (
+              <button
+                onClick={handleRestore}
+                className="bg-green-400 hover:bg-green-500 px-6 py-2 rounded-md"
+              >
+                Restore user
+              </button>
+            )}
+          </div>
+
+
         </div>
 
       </div>

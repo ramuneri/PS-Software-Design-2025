@@ -1,111 +1,91 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
-type UserDetails = {
+type User = {
   id: string;
   email: string;
   name: string;
   surname: string;
-  phoneNumber: string | null;
+  phoneNumber: string;
   role: string;
+  isActive: boolean;
   lastLoginAt: string;
 };
 
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem("access-token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export default function UserDetailsPage() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [user, setUser] = useState<UserDetails | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadUser() {
+    async function load() {
       try {
-        const token = localStorage.getItem("access-token");
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/users/${id}`,
-          {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          }
-        );
+        setError(null);
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${id}`, {
+          headers: authHeaders(),
+        });
 
-        if (!res.ok) throw new Error("Failed to load user");
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || `Failed to load user (${res.status})`);
+        }
 
-        const data = await res.json();
-        setUser(data);
-      } catch (err: any) {
-        setError(err.message ?? "Unknown error");
-      } finally {
-        setLoading(false);
+        setUser(await res.json());
+      } catch (e: any) {
+        setError(e?.message ?? "Failed to load user");
       }
     }
 
-    loadUser();
+    load();
   }, [id]);
 
-  if (loading) {
-    return <div className="p-6 text-black">Loading user…</div>;
-  }
-
-  if (error) {
-    return <div className="p-6 text-red-600">{error}</div>;
-  }
-
-  if (!user) return null;
+  if (error) return <div className="p-6 text-red-600">{error}</div>;
+  if (!user) return <div className="p-6">Loading…</div>;
 
   return (
-    <div className="min-h-screen bg-gray-200 p-6 flex justify-center">
+    <div className="min-h-screen bg-gray-200 p-6 flex justify-center text-black">
       <div className="w-[90%] max-w-3xl space-y-6">
-
-        {/* HEADER */}
-        <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
-          User Profile
+        <div className="bg-gray-300 rounded-md py-3 px-4 text-center font-medium">
+          User Details
         </div>
 
-        {/* USER DETAILS */}
-        <div className="bg-gray-300 rounded-md p-6 space-y-3 text-black">
-          <div>
-            <span className="font-medium">Email:</span> {user.email}
+        {!user.isActive && (
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded">
+            This user is inactive.
           </div>
+        )}
 
-          <div>
-            <span className="font-medium">Name:</span>{" "}
-            {user.name} {user.surname}
-          </div>
-
-          <div>
-            <span className="font-medium">Phone:</span>{" "}
-            {user.phoneNumber || "-"}
-          </div>
-
-          <div>
-            <span className="font-medium">Role:</span> {user.role}
-          </div>
-
-          <div>
-            <span className="font-medium">Last login:</span>{" "}
-            {new Date(user.lastLoginAt).toLocaleString()}
-          </div>
+        <div className="bg-gray-300 rounded-md p-6 space-y-2">
+          <div><b>Email:</b> {user.email}</div>
+          <div><b>Name:</b> {user.name}</div>
+          <div><b>Surname:</b> {user.surname || "-"}</div>
+          <div><b>Phone:</b> {user.phoneNumber || "-"}</div>
+          <div><b>Role:</b> {user.role}</div>
+          <div><b>Last login:</b> {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "-"}</div>
         </div>
 
-        {/* ACTIONS */}
         <div className="flex gap-4">
           <button
-            onClick={() => navigate(`/users/${user.id}/edit`)}
-            className="bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded-md text-black"
-          >
-            Edit
-          </button>
-
-          <button
-            onClick={() => navigate(-1)}
-            className="bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded-md text-black"
+            onClick={() => navigate("/users")}
+            className="flex-1 bg-gray-300 hover:bg-gray-400 rounded-md py-3 font-medium"
           >
             Back
           </button>
-        </div>
 
+          <button
+            onClick={() => navigate(`/users/${user.id}/edit`)}
+            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md py-3 font-medium"
+          >
+            Edit
+          </button>
+        </div>
       </div>
     </div>
   );
