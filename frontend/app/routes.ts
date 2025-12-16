@@ -41,6 +41,16 @@ export default [
     route("giftcards/view/:id", "routes/giftcards/view.tsx"),
     route("giftcards/edit/:id", "routes/giftcards/edit.tsx"),
 
+    route("users", "routes/users/index.tsx"),
+    route("users/create", "routes/users/create.tsx"),
+    route("users/:id/edit", "routes/users/edit.tsx"),
+    route("users/:id", "routes/users/details.tsx"),
+
+
+
+
+    
+    
     route("example", "routes/example.tsx"),
     route("debug", "routes/debug.tsx"),
   ]),

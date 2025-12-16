@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
 
 namespace backend.Data.Models;
@@ -13,6 +12,8 @@ public class User : IdentityUser
     public DateTime LastLoginAt { get; set; }
     public string Role { get; set; } = null!;
     public bool IsSuperAdmin { get; set; }
+
+    public bool IsActive { get; set; } = true;
 
     public Merchant? Merchant { get; set; }
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();

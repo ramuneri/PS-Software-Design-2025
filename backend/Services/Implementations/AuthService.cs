@@ -19,24 +19,30 @@ public class AuthService : IAuthService
     private readonly UserManager<User> _userManager;
     private readonly IConfiguration _config;
     private readonly ApplicationDbContext _context;
-    
+
     public AuthService(UserManager<User> userManager, IConfiguration config, ApplicationDbContext context)
     {
         _userManager = userManager;
         _config = config;
         _context = context;
     }
-    
+
     public async Task<LoginResponseDto?> Login(string email, string password)
     {
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null || !await _userManager.CheckPasswordAsync(user, password))
             return null;
 
+        user.LastLoginAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync();
+
         var accessToken = GenerateJwt(user);
         var refreshToken = GenerateRefreshToken();
-        
-        var refreshTokenEntity= new RefreshToken
+
+        var refreshTokenEntity = new RefreshToken
         {
             Token = refreshToken,
             UserId = user.Id,
@@ -62,10 +68,10 @@ public class AuthService : IAuthService
                 PhoneNumber: user.PhoneNumber ?? "",
                 Role: user.Role ?? "Employee",
                 IsSuperAdmin: user.IsSuperAdmin,
-                IsActive: true,
+                IsActive: user.IsActive,
                 LastLoginAt: user.LastLoginAt,
                 CreatedAt: user.CreatedAt,
-                UpdatedAt: DateTime.UtcNow
+                UpdatedAt: user.UpdatedAt
             )
         );
     }
@@ -81,7 +87,7 @@ public class AuthService : IAuthService
         var user = await _userManager.FindByIdAsync(tokenEntity.UserId);
         if (user == null)
             return null;
-        
+
         tokenEntity.IsRevoked = true;
 
         var newRefreshToken = GenerateRefreshToken();
@@ -125,7 +131,7 @@ public class AuthService : IAuthService
 
         await _context.SaveChangesAsync();
     }
-    
+
     private string GenerateJwt(User user)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
@@ -148,12 +154,12 @@ public class AuthService : IAuthService
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
-    
+
     private string GenerateRefreshToken()
     {
         var randomBytes = new byte[64];
         RandomNumberGenerator.Create().GetBytes(randomBytes);
-        
+
         return Convert.ToBase64String(randomBytes);
     }
 }
