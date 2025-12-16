@@ -9,6 +9,7 @@ namespace backend.Data
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<Merchant> Merchants { get; set; }
         public DbSet<Product> Products { get; set; }
+        public DbSet<ProductVariation> ProductVariations { get; set; }
         public DbSet<Service> Services { get; set; }
         public DbSet<ServiceChargePolicy> ServiceChargePolicies { get; set; }
         public DbSet<OrderServiceChargePolicy> OrderServiceChargePolicies { get; set; }
@@ -112,6 +113,19 @@ namespace backend.Data
                 .WithMany()
                 .HasForeignKey(p => p.TaxCategoryId)
                 .OnDelete(DeleteBehavior.SetNull);
+            
+            builder.Entity<ProductVariation>()
+                .HasOne(pv => pv.Product)
+                .WithMany(p => p.Variations)
+                .HasForeignKey(pv => pv.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ProductVariation>()
+                .Property(pv => pv.PriceAdjustment)
+                .HasPrecision(18, 2);
+
+            builder.Entity<ProductVariation>()
+                .HasIndex(pv => pv.ProductId);
 
             // Configure Service relationships
             builder.Entity<Service>()
@@ -171,6 +185,12 @@ namespace backend.Data
                 .WithMany(r => r.OrderItems)
                 .HasForeignKey(oi => oi.ReservationId)
                 .OnDelete(DeleteBehavior.SetNull);
+            
+            builder.Entity<OrderItem>()
+                .HasOne(oi => oi.ProductVariation)
+                .WithMany()
+                .HasForeignKey(oi => oi.ProductVariationId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Configure OrderTip -> Order relationship
             builder.Entity<OrderTip>()

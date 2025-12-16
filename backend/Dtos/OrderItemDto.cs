@@ -7,5 +7,7 @@ public record OrderItemDto(
     int Quantity,
     decimal ItemTotal,
     string? ProductName = null,
-    string? ServiceName = null
+    string? ServiceName = null,
+    int? ProductVariationId = null,
+    string? ProductVariationName = null
 );

@@ -9,6 +9,8 @@ type OrderItemDetail = {
     productName?: string;
     serviceName?: string;
     itemTotal: number;
+    productVariationId?: number;
+    productVariationName?: string;
 };
 
 type PaymentDetail = {
@@ -781,7 +783,14 @@ export default function OrderCheckoutPage() {
                                             const name = item.productName || item.serviceName || "Item";
                                             return (
                                                 <div key={item.id} className="flex justify-between">
-                                                    <span>{item.quantity}x {name}</span>
+                                                    <div>
+                                                        <div>{item.quantity}x {name}</div>
+                                                        {item.productVariationName && (
+                                                            <div className="text-xs text-gray-500">
+                                                                + {item.productVariationName}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                     <span>{currency} {item.itemTotal.toFixed(2)}</span>
                                                 </div>
                                             );
@@ -1112,18 +1121,18 @@ export default function OrderCheckoutPage() {
                                     </div>
                                     <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
                                         {order.items.map((item) => {
-                                            const name = item.productName || item.serviceName || "Unknown";
+                                            const name = item.productName || item.serviceName || "Item";
                                             return (
-                                                <div
-                                                    key={item.id}
-                                                    className="flex justify-between bg-gray-100 px-4 py-3 rounded-md"
-                                                >
-                                                    <span className="text-sm text-gray-800 font-medium">
-                                                        {item.quantity}x {name}
-                                                    </span>
-                                                    <span className="text-sm text-gray-800 font-semibold">
-                                                        {currency} {item.itemTotal.toFixed(2)}
-                                                    </span>
+                                                <div key={item.id} className="flex justify-between">
+                                                    <div>
+                                                        <div>{item.quantity}x {name}</div>
+                                                        {item.productVariationName && (
+                                                            <div className="text-xs text-gray-500">
+                                                                + {item.productVariationName}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <span>{currency} {item.itemTotal.toFixed(2)}</span>
                                                 </div>
                                             );
                                         })}
@@ -1224,8 +1233,13 @@ export default function OrderCheckoutPage() {
                                                                                     <div className="flex flex-col">
                                                                                         <span className="font-medium">
                                                                                             {item.quantity}x {name}
+                                                                                            {item.productVariationName && (
+                                                                                                <span className="text-xs text-gray-500 ml-1">
+                                                                                                    (+ {item.productVariationName})
+                                                                                                </span>
+                                                                                            )}
                                                                                         </span>
-                                                                                        <span className="text-gray-700">
+                                                                                                                                                            <span className="text-gray-700">
                                                                                             {currency} {itemGross.toFixed(2)} (incl. est tax {currency} {itemTaxShare.toFixed(2)})
                                                                                         </span>
                                                                                     </div>

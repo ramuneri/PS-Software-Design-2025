@@ -67,4 +67,44 @@ public class ProductsController : ControllerBase
     [HttpPost("{id:int}/restore")]
     public async Task<ActionResult> Restore(int id)
         => await _service.RestoreAsync(id) ? NoContent() : NotFound();
+    
+    [HttpGet("{id:int}/variations")]
+    public async Task<ActionResult<IEnumerable<ProductVariationDto>>> GetVariations(int id)
+    {
+        var variations = await _service.GetVariationsAsync(id);
+        return Ok(new { data = variations });
+    }
+    
+    [Authorize]
+    [HttpPost("{id:int}/variations")]
+    public async Task<ActionResult<ProductVariationDto>> CreateVariation(
+        int id,
+        CreateProductVariationDto dto)
+    {
+        try
+        {
+            var created = await _service.CreateVariationAsync(id, dto);
+            return Ok(new { data = created });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+    }
+    
+    [Authorize]
+    [HttpPatch("{productId:int}/variations/{variationId:int}")]
+    public async Task<ActionResult<ProductVariationDto>> UpdateVariation(
+        int productId,
+        int variationId,
+        UpdateProductVariationDto dto)
+    {
+        var updated = await _service.UpdateVariationAsync(variationId, dto);
+        return updated == null ? NotFound() : Ok(new { data = updated });
+    }
+    
+    [Authorize]
+    [HttpDelete("{productId:int}/variations/{variationId:int}")]
+    public async Task<ActionResult> DeleteVariation(int productId, int variationId) 
+        => await _service.DeleteVariationAsync(variationId) ? NoContent() : NotFound();
 }

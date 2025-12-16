@@ -18,4 +18,5 @@ public class Product
     public Merchant Merchant { get; set; } = null!;
     public TaxCategories? TaxCategory { get; set; }
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+    public ICollection<ProductVariation> Variations { get; set; } = new List<ProductVariation>();
 }
