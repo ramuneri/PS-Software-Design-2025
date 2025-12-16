@@ -15,7 +15,8 @@ type OrderItem = {
 type OrderDetail = {
     id: number;
     customerIdentifier: string | null;
-    openedAt: string;
+    openedAt?: string | null;
+    createdAt?: string | null;
     closedAt: string | null;
     cancelledAt: string | null;
     employeeId: string | null;
@@ -172,7 +173,7 @@ export default function OrderViewPage() {
                                         <div className="space-y-2">
                                             <div className="text-gray-600 font-medium px-2">Opened at</div>
                                             <div className="bg-gray-200 rounded-md px-4 py-3 text-black">
-                                                {formatDateTime(order.openedAt)}
+                                                {formatDateTime(order.openedAt ?? order.createdAt ?? null)}
                                             </div>
                                         </div>
 

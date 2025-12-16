@@ -5,7 +5,8 @@ import { useNavigate } from "react-router";
 type Order = {
     id: number;
     customerIdentifier: string | null;
-    openedAt: string;
+    openedAt?: string | null;
+    createdAt?: string | null;
     closedAt: string | null;
     cancelledAt: string | null;
     totalAmount: number;
@@ -153,7 +154,7 @@ export default function OrdersListPage() {
                                             {order.customerIdentifier || "N/A"}
                                         </span>
                                         <span className="col-span-3 text-black">
-                                            {formatDateTime(order.openedAt)}
+                                            {formatDateTime(order.openedAt ?? order.createdAt ?? null)}
                                         </span>
                                         <span className="col-span-2 text-black text-center">
                                             {statusLabel(order)}
