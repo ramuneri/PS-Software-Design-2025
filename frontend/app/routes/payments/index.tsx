@@ -25,16 +25,19 @@ export default function PaymentsPage() {
   const [method, setMethod] = useState("");
 
   const loadPayments = async (
-    nextSearch: string = search,
-    nextMethod: string = method
+    nextSearch: string | null = search,
+    nextMethod: string | null = method
   ) => {
     try {
       setLoading(true);
       setError(null);
 
       const url = new URL(`${import.meta.env.VITE_API_URL}/api/payments`);
-      if (nextSearch.trim()) url.searchParams.set("search", nextSearch.trim());
-      if (nextMethod) url.searchParams.set("method", nextMethod);
+      const searchTerm = (nextSearch ?? "").toString();
+      const methodTerm = (nextMethod ?? "").toString();
+
+      if (searchTerm.trim()) url.searchParams.set("search", searchTerm.trim());
+      if (methodTerm) url.searchParams.set("method", methodTerm);
 
       const res = await fetch(url.toString(), {
         headers: {
@@ -124,10 +127,10 @@ export default function PaymentsPage() {
           <div className="flex items-center gap-3">
             <label className="text-black text-sm">Method</label>
             <select
-              value={method}
-              onChange={(e) => setMethod(e.target.value)}
-              className="bg-gray-200 rounded-md px-3 py-2 text-black"
-            >
+            value={method}
+            onChange={(e) => setMethod(e.target.value)}
+            className="bg-gray-200 rounded-md px-3 py-2 text-black"
+          >
               <option value="">All</option>
               <option value="CASH">Cash</option>
               <option value="CARD">Card</option>
@@ -135,7 +138,7 @@ export default function PaymentsPage() {
             </select>
             <button
               type="button"
-              onClick={loadPayments}
+              onClick={() => loadPayments()}
               className="ml-auto bg-gray-200 text-black px-4 py-2 rounded hover:bg-gray-300"
             >
               Refresh
