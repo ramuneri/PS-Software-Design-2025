@@ -119,4 +119,72 @@ public class ProductService : IProductService
             product.Category,
             product.IsActive
         );
+    
+    public async Task<IEnumerable<ProductVariationDto>> GetVariationsAsync(int productId)
+    {
+        return await _db.ProductVariations
+            .Where(v => v.ProductId == productId)
+            .OrderBy(v => v.Name)
+            .Select(v => new ProductVariationDto(
+                v.ProductVariationId,
+                v.ProductId,
+                v.Name,
+                v.PriceAdjustment
+            ))
+            .ToListAsync();
+    }
+
+    public async Task<ProductVariationDto> CreateVariationAsync(int productId, CreateProductVariationDto dto)
+    {
+        var productExists = await _db.Products.AnyAsync(p => p.ProductId == productId);
+        if (!productExists)
+            throw new InvalidOperationException("Product not found");
+
+        var variation = new ProductVariation
+        {
+            ProductId = productId,
+            Name = dto.Name,
+            PriceAdjustment = dto.PriceAdjustment
+        };
+
+        _db.ProductVariations.Add(variation);
+        await _db.SaveChangesAsync();
+
+        return new ProductVariationDto(
+            variation.ProductVariationId,
+            variation.ProductId,
+            variation.Name,
+            variation.PriceAdjustment
+        );
+    }
+
+    public async Task<ProductVariationDto?> UpdateVariationAsync(int variationId, UpdateProductVariationDto dto)
+    {
+        var variation = await _db.ProductVariations.FindAsync(variationId);
+        if (variation == null)
+            return null;
+
+        if (dto.Name != null) variation.Name = dto.Name;
+        if (dto.PriceAdjustment.HasValue) variation.PriceAdjustment = dto.PriceAdjustment.Value;
+
+        await _db.SaveChangesAsync();
+    
+        return new ProductVariationDto(
+            variation.ProductVariationId,
+            variation.ProductId,
+            variation.Name,
+            variation.PriceAdjustment
+        );
+    }
+
+    public async Task<bool> DeleteVariationAsync(int variationId)
+    {
+        var variation = await _db.ProductVariations.FindAsync(variationId);
+        if (variation == null)
+            return false;
+
+        _db.ProductVariations.Remove(variation);
+        await _db.SaveChangesAsync();
+        return true;
+    }
 }

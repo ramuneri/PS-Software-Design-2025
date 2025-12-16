@@ -8,6 +8,7 @@ type OrderItem = {
     quantity: number;
     itemTotal: number;
     productName?: string;
+    productVariationName: string;
     serviceName?: string;
 };
 
@@ -63,33 +64,8 @@ export default function OrderViewPage() {
             if (!res.ok) throw new Error(`Failed to load order (${res.status})`);
 
             const data = await res.json();
-
-            // Fetch product names for all items
-            const itemsWithNames = await Promise.all(
-                data.items.map(async (item: OrderItem) => {
-                    try {
-                        const productRes = await fetch(
-                            `${import.meta.env.VITE_API_URL}/api/products/${item.productId}`,
-                            {
-                                headers: {
-                                    "Content-Type": "application/json",
-                                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                                },
-                            }
-                        );
-
-                        if (productRes.ok) {
-                            const product: Product = await productRes.json();
-                            return { ...item, productName: product.name };
-                        }
-                        return { ...item, productName: `Product #${item.productId}` };
-                    } catch {
-                        return { ...item, productName: `Product #${item.productId}` };
-                    }
-                })
-            );
-
-            setOrder({ ...data, items: itemsWithNames });
+            
+            setOrder(data);
         } catch (err: any) {
             setError(err.message ?? "Unknown error");
         } finally {
@@ -274,9 +250,16 @@ export default function OrderViewPage() {
                                                         key={item.id}
                                                         className="grid grid-cols-9 gap-3 bg-gray-200 px-4 py-3 rounded-md items-center"
                                                     >
-                                                        <span className="col-span-4 text-black">
-                                                            {item.productName || `Product #${item.productId}`}
-                                                        </span>
+                                                        <div className="col-span-4 text-black">
+                                                            <div className="font-medium">
+                                                                {item.productName || item.serviceName || `Product #${item.productId}`}
+                                                            </div>
+                                                            {item.productVariationName && (
+                                                                <div className="text-xs text-gray-600">
+                                                                    + {item.productVariationName}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                         <span className="col-span-2 text-black text-center">
                                                             {item.quantity}
                                                         </span>

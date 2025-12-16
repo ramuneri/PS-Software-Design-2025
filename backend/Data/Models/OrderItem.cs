@@ -9,6 +9,7 @@ public class OrderItem
 
     public int OrderId { get; set; }
     public int? ProductId { get; set; }
+    public int? ProductVariationId { get; set; }
     public int? ServiceId { get; set; }
     public int? ReservationId { get; set; }
 
@@ -16,6 +17,7 @@ public class OrderItem
 
     public Order Order { get; set; } = null!;
     public Product? Product { get; set; }
+    public ProductVariation? ProductVariation { get; set; }
     public Service? Service { get; set; }
     public Reservation? Reservation { get; set; }
 }
