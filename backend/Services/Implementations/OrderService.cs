@@ -55,7 +55,7 @@ public class OrderService : IOrderService
             List<SplitPaymentRequest> splits,
             TipRequest? tipRequest,
             decimal? discountAmount = null,
-            decimal? serviceChargeAmount = null)
+        decimal? serviceChargeAmount = null)
     {
         // Load order with related data
         var order = await context.Orders
@@ -100,12 +100,9 @@ public class OrderService : IOrderService
         var itemTotals = new Dictionary<int, (decimal itemTotal, decimal itemTax)>();
         foreach (var oi in order.OrderItems)
         {
-            decimal price = oi.Product?.Price ?? oi.Service?.DefaultPrice ?? 0;
-            
-            if (oi.ProductVariationId != null && oi.ProductVariation != null)
-            {
-                price += oi.ProductVariation.PriceAdjustment;
-            }
+            decimal price = oi.ProductVariationId != null && oi.ProductVariation != null
+                ? oi.ProductVariation.PriceAdjustment
+                : oi.Product?.Price ?? oi.Service?.DefaultPrice ?? 0;
     
             var itemTotal = price * oi.Quantity;
             decimal taxRate = 0;
@@ -139,6 +136,12 @@ public class OrderService : IOrderService
 
             var payerTotal = itemsSubtotal - payerDiscount + payerService + itemsTax + payerTip;
 
+            var normalizedMethod = split.Method.ToUpper();
+            var provider = split.Provider ?? (normalizedMethod == "CARD" ? "STRIPE" : null);
+            var idempotencyKey = normalizedMethod == "CARD"
+                ? $"order-{orderId}-split-{payerIndex}-{Guid.NewGuid():N}"
+                : null;
+
             allocations.Add(new SplitAllocation(
                 payerIndex,
                 itemsSubtotal,
@@ -147,7 +150,13 @@ public class OrderService : IOrderService
                 payerService,
                 payerTip,
                 payerTotal,
-                new PaymentRequest(split.Method, payerTotal, split.Currency, null, null)
+                new PaymentRequest(
+                    normalizedMethod,
+                    payerTotal,
+                    split.Currency,
+                    provider,
+                    idempotencyKey
+                )
             ));
             payerIndex++;
         }
@@ -679,12 +688,9 @@ public class OrderService : IOrderService
             {
                 var product = orderItem.Product;
                 
-                decimal basePrice = product.Price ?? 0;
-                
-                if (orderItem.ProductVariationId != null && orderItem.ProductVariation != null)
-                {
-                    basePrice += orderItem.ProductVariation.PriceAdjustment;
-                }
+                decimal basePrice = orderItem.ProductVariationId != null && orderItem.ProductVariation != null
+                    ? orderItem.ProductVariation.PriceAdjustment
+                    : product.Price ?? 0;
 
                 var itemTotal = basePrice * orderItem.Quantity;
                 subTotal += itemTotal;

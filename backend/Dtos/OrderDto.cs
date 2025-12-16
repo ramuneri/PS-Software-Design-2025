@@ -1,5 +1,6 @@
 
 using backend.Enums;
+using System.Text.Json.Serialization;
 
 namespace backend.Dtos;
 
@@ -18,4 +19,9 @@ public record OrderDto(
     DateTime? ClosedAt,
     DateTime? CancelledAt,
     List<OrderTaxBreakdownDto>? TaxBreakdown
-);
+)
+{
+    // Alias for frontend expectations
+    [JsonPropertyName("openedAt")]
+    public DateTime OpenedAt => CreatedAt;
+}

@@ -490,7 +490,7 @@ export default function OrderCheckoutPage() {
             // Split mode
             if (splitMode) {
                 // Build splits grouped by payer index
-                let splits: { orderItemIds: number[]; method: PaymentMethod; currency: string }[] = [];
+                let splits: { orderItemIds: number[]; method: PaymentMethod; currency: string; provider?: string }[] = [];
                 if (!order.items) {
                     setError("Order has no items.");
                     setPaying(false);
@@ -529,6 +529,7 @@ export default function OrderCheckoutPage() {
                             orderItemIds: itemIds,
                             method: payer.method,
                             currency,
+                            provider: payer.method === "CARD" ? "STRIPE" : undefined,
                         };
                     });
                 }
