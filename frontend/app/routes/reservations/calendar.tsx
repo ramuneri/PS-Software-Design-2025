@@ -14,9 +14,6 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-const WORK_START_HOUR = 7;
-const WORK_END_HOUR = 20;
-
 function getStartOfWeek(date: Date) {
   const d = new Date(date);
   const day = d.getDay();
@@ -40,39 +37,11 @@ export default function ReservationsCalendar() {
     return end;
   }, [weekStart]);
 
-  const hours = useMemo(() => {
-    const relevant = reservations.filter((r) => {
-      const start = new Date(r.startTime);
-      if (Number.isNaN(start.getTime())) return false;
-      return start >= weekStart && start < weekEnd;
-    });
-
-    let minHour = WORK_START_HOUR;
-    let maxHour = WORK_END_HOUR;
-
-    relevant.forEach((r) => {
-      const start = new Date(r.startTime);
-      const end = new Date(r.endTime);
-
-      if (!Number.isNaN(start.getTime())) {
-        minHour = Math.min(minHour, start.getHours());
-        maxHour = Math.max(maxHour, start.getHours() + 1);
-      }
-
-      if (!Number.isNaN(end.getTime())) {
-        const endHour = end.getHours() + (end.getMinutes() > 0 ? 1 : 0);
-        maxHour = Math.max(maxHour, endHour);
-      }
-    });
-
-    minHour = Math.max(0, minHour);
-    maxHour = Math.min(23, maxHour);
-
-    return Array.from(
-      { length: maxHour - minHour + 1 },
-      (_, i) => minHour + i
-    );
-  }, [reservations, weekEnd, weekStart]);
+  // Show full 24h window so off-hours reservations are visible.
+  const hours = useMemo(
+    () => Array.from({ length: 24 }, (_, i) => i),
+    []
+  );
 
   const days = useMemo(
     () =>
