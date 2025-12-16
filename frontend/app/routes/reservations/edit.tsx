@@ -21,8 +21,6 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-const WORK_START_HOUR = 7;
-const WORK_END_HOUR = 20;
 
 function toDateTimeLocalValue(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
