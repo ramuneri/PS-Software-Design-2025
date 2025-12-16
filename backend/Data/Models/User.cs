@@ -13,7 +13,6 @@ public class User : IdentityUser
     public string Role { get; set; } = null!;
     public bool IsSuperAdmin { get; set; }
 
-    // ✅ SOFT DELETE FLAG
     public bool IsActive { get; set; } = true;
 
     public Merchant? Merchant { get; set; }

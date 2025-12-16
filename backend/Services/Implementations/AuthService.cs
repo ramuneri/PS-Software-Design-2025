@@ -33,6 +33,12 @@ public class AuthService : IAuthService
         if (user == null || !await _userManager.CheckPasswordAsync(user, password))
             return null;
 
+        user.LastLoginAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync();
+
         var accessToken = GenerateJwt(user);
         var refreshToken = GenerateRefreshToken();
 
