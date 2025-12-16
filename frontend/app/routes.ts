@@ -10,6 +10,7 @@ export default [
     route("orders/view/:id", "routes/orders/view.tsx"),
     route("orders/edit/:id", "routes/orders/edit.tsx"),
     route("orders/checkout/:id", "routes/orders/checkout.tsx"),
+    route("orders/receipt/:id", "routes/orders/receipt.tsx"),
     
     route("discounts", "routes/discounts/index.tsx"),
     route("discounts/create", "routes/discounts/create.tsx"),

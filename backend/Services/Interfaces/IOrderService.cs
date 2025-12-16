@@ -19,4 +19,12 @@ public interface IOrderService
             TipRequest? tip,
             decimal? discountAmount = null,
             decimal? serviceChargeAmount = null);
+
+    public Task<(OrderDto? Order, decimal? Change, string? PaymentIntentId, bool? Requires3DS, string? Error)>
+        CloseOrderWithItemSplits(
+            int orderId,
+            List<SplitPaymentRequest> splits,
+            TipRequest? tip,
+            decimal? discountAmount = null,
+            decimal? serviceChargeAmount = null);
 }

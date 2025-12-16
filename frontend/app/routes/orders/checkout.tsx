@@ -54,8 +54,11 @@ export default function OrderCheckoutPage() {
     const [order, setOrder] = useState<OrderDetail | null>(null);
     const [method, setMethod] = useState<PaymentMethod>("CASH");
     const [amountPaid, setAmountPaid] = useState<string>("");
-    const [currency, setCurrency] = useState("EUR");
+    const currency = "EUR";
     const [giftCardCode, setGiftCardCode] = useState<string>("");
+    const [splitMode, setSplitMode] = useState(false);
+    const [payers, setPayers] = useState([{ method: "CASH" as PaymentMethod }]);
+    const [itemAssignments, setItemAssignments] = useState<Record<number, number>>({});
 
     // Tip settings
     const [tipType, setTipType] = useState<TipType>("percentage");
@@ -70,6 +73,8 @@ export default function OrderCheckoutPage() {
     const [change, setChange] = useState<number | null>(null);
     const [requires3DS, setRequires3DS] = useState(false);
     const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [showPostClose, setShowPostClose] = useState(false);
 
     const [loading, setLoading] = useState(false);
     const [paying, setPaying] = useState(false);
@@ -139,6 +144,12 @@ export default function OrderCheckoutPage() {
             const data = await response.json();
             setOrder(data);
 
+            if (data.items) {
+                const initial: Record<number, number> = {};
+                data.items.forEach((item: OrderItemDetail) => (initial[item.id] = 0));
+                setItemAssignments(initial);
+            }
+
             // Pre-fill amount with remaining balance
             if (data.payments) {
                 const paid = data.payments.reduce(
@@ -157,6 +168,19 @@ export default function OrderCheckoutPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const toggleItemAssignment = (itemId: number, payerIdx: number) => {
+        setItemAssignments((prev) => {
+            const prevPayer = prev[itemId];
+            const next = { ...prev };
+            if (prevPayer === payerIdx) {
+                delete next[itemId];
+            } else {
+                next[itemId] = payerIdx;
+            }
+            return next;
+        });
     };
 
     const loadDiscounts = async () => {
@@ -211,6 +235,44 @@ export default function OrderCheckoutPage() {
         } catch (err) {
             console.error("Failed to load service charges", err);
         }
+    };
+
+    const addPayer = () => {
+        setPayers((prev) => [...prev, { method: "CASH" }]);
+    };
+
+    const removePayer = (index: number) => {
+        setPayers((prev) => {
+            if (prev.length === 1) return prev;
+            const next = prev.filter((_, i) => i !== index);
+            setItemAssignments((assignments) => {
+                const updated: Record<number, number> = {};
+                Object.entries(assignments).forEach(([itemId, payerIdx]) => {
+                    const numeric = Number(payerIdx);
+                    if (numeric === index) {
+                        updated[Number(itemId)] = 0;
+                    } else {
+                        updated[Number(itemId)] =
+                            numeric > index ? numeric - 1 : numeric;
+                    }
+                });
+                return updated;
+            });
+            return next;
+        });
+    };
+
+    const updateAssignment = (itemId: number, payerIdx: number) => {
+        setItemAssignments((prev) => ({
+            ...prev,
+            [itemId]: payerIdx,
+        }));
+    };
+
+    const updatePayerMethod = (index: number, newMethod: PaymentMethod) => {
+        setPayers((prev) =>
+            prev.map((p, i) => (i === index ? { ...p, method: newMethod } : p))
+        );
     };
 
     const validateGiftCard = async () => {
@@ -347,6 +409,45 @@ export default function OrderCheckoutPage() {
         return clampedBase + serviceChargeAmount + calculatedTip;
     }, [remaining, discountAmount, serviceChargeAmount, calculatedTip]);
 
+    const payerTotals = useMemo(() => {
+        const totals = payers.map(() => 0);
+        if (!order?.items) return totals;
+        order.items.forEach((item) => {
+            const idx = itemAssignments[item.id] ?? 0;
+            if (totals[idx] === undefined) {
+                totals[idx] = 0;
+            }
+            totals[idx] += item.itemTotal;
+        });
+        return totals;
+    }, [payers, order, itemAssignments]);
+
+    const payerTaxShare = useMemo(() => {
+        const subtotalBase = order?.subTotal ?? subtotal;
+        const taxTotal = order?.tax ?? tax;
+        if (subtotalBase <= 0) return payers.map(() => 0);
+        return payerTotals.map((pt) => (pt / subtotalBase) * taxTotal);
+    }, [order, subtotal, tax, payerTotals, payers.length]);
+
+    const allItemsAssigned = useMemo(() => {
+        if (!order?.items) return false;
+        return order.items.every((u) => itemAssignments[u.id] !== undefined);
+    }, [order, itemAssignments]);
+
+    const allPayersCash = useMemo(() => {
+        return splitMode && payers.every((p) => p.method === "CASH");
+    }, [splitMode, payers]);
+
+    const unassignedItemsTotal = useMemo(() => {
+        if (!order?.items) return 0;
+        return order.items.reduce((sum, item) => {
+            if (itemAssignments[item.id] === undefined) {
+                return sum + item.itemTotal;
+            }
+            return sum;
+        }, 0);
+    }, [order, itemAssignments]);
+
     const calculatedChange = useMemo(() => {
         if (method !== "CASH") return null;
         const amount = Number(amountPaid);
@@ -363,6 +464,12 @@ export default function OrderCheckoutPage() {
         }
     }, [amountDue, remaining, method]);
 
+    useEffect(() => {
+        if (allPayersCash) {
+            setAmountPaid(amountDue.toFixed(2));
+        }
+    }, [allPayersCash, amountDue]);
+
     const handlePayAndClose = async () => {
         if (!id || !order) return;
 
@@ -370,30 +477,142 @@ export default function OrderCheckoutPage() {
         setError(null);
         setRequires3DS(false);
         setPaymentIntentId(null);
+        setShowConfirm(false);
 
-        const amount = Number(amountPaid);
         const tipAmount = calculatedTip;
-
-        if (!Number.isFinite(amount) || amount <= 0) {
-            setError("Enter a valid amount.");
-            return;
-        }
-
-        if (method === "CASH" && amount < amountDue) {
-            setError(
-                `Cash must be at least the amount due (${amountDue.toFixed(2)}).`
-            );
-            return;
-        }
-
-        if (tipAmount < 0) {
-            setError("Tip cannot be negative.");
-            return;
-        }
 
         try {
             setPaying(true);
             const token = localStorage.getItem("access-token");
+
+            // Split mode
+            if (splitMode) {
+                // Build splits grouped by payer index
+                let splits: { orderItemIds: number[]; method: PaymentMethod; currency: string }[] = [];
+                if (!order.items) {
+                    setError("Order has no items.");
+                    setPaying(false);
+                    return;
+                }
+
+                if (allPayersCash) {
+                    // pooled cash: send a single split with all items
+                    splits = [
+                        {
+                            orderItemIds: order.items.map((i) => i.id),
+                            method: "CASH",
+                            currency,
+                        },
+                    ];
+                } else {
+                    const splitsMap: Record<number, number[]> = {};
+                    order.items.forEach((item) => {
+                        const payerIdx = itemAssignments[item.id];
+                        if (payerIdx === undefined) return;
+                        if (!splitsMap[payerIdx]) splitsMap[payerIdx] = [];
+                        // only push once per item (line)
+                        splitsMap[payerIdx].push(item.id);
+                    });
+
+                    // ensure every item assigned
+                    if (!allItemsAssigned) {
+                        setError("Assign all items to a payer.");
+                        setPaying(false);
+                        return;
+                    }
+
+                    splits = Object.entries(splitsMap).map(([payerIdx, itemIds]) => {
+                        const payer = payers[Number(payerIdx)] ?? payers[0];
+                        return {
+                            orderItemIds: itemIds,
+                            method: payer.method,
+                            currency,
+                        };
+                    });
+                }
+
+                const payload: any = {
+                    splits,
+                    discountAmount: discountAmount > 0 ? discountAmount : null,
+                    serviceChargeAmount: serviceChargeAmount > 0 ? serviceChargeAmount : null,
+                };
+
+                if (tipAmount > 0) {
+                    payload.tip = {
+                        source: "CASH",
+                        amount: tipAmount,
+                    };
+                }
+
+                if (allPayersCash) {
+                    const parsed = Number((amountPaid || "").replace(",", "."));
+                    const totalPaid = Number.isFinite(parsed) && parsed > 0 ? parsed : amountDue;
+                    let splitChange: number | null = null;
+
+                    if (totalPaid < amountDue) {
+                        setError("Enter the total cash received.");
+                        setPaying(false);
+                        return;
+                    }
+                    const changeAmount = totalPaid - amountDue;
+                    if (changeAmount > 0) {
+                        splitChange = changeAmount;
+                        setChange(changeAmount);
+                    }
+                    // stash on payload for later redirect timing
+                    payload.totalPaid = totalPaid;
+                    payload.change = changeAmount > 0 ? changeAmount : 0;
+                    // attach flag to reuse below
+                    (payload as any).__splitChange = splitChange;
+                }
+
+                const response = await fetch(
+                    `${import.meta.env.VITE_API_URL}/orders/${id}/split-close`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                        },
+                        body: JSON.stringify(payload),
+                    }
+                );
+
+                if (!response.ok) {
+                    const errJson = await response.json().catch(() => null);
+                    throw new Error(errJson?.message || "Failed to close order with splits");
+                }
+
+                const changeFromPayload = (payload as any).__splitChange as number | null | undefined;
+                if (allPayersCash && changeFromPayload !== null && changeFromPayload !== undefined && changeFromPayload > 0) {
+                    setShowPostClose(true);
+                    return;
+                }
+                setShowPostClose(true);
+                return;
+            }
+
+            const amount = Number((amountPaid || "").replace(",", "."));
+
+            if (!Number.isFinite(amount) || amount <= 0) {
+                setError("Enter a valid amount.");
+                setPaying(false);
+                return;
+            }
+
+            if (method === "CASH" && amount < amountDue) {
+                setError(
+                    `Cash must be at least the amount due (${amountDue.toFixed(2)}).`
+                );
+                setPaying(false);
+                return;
+            }
+
+            if (tipAmount < 0) {
+                setError("Tip cannot be negative.");
+                setPaying(false);
+                return;
+            }
 
             const payment: any = {
                 method,
@@ -457,12 +676,8 @@ export default function OrderCheckoutPage() {
 
             if (method === "CASH" && result.change !== null && result.change > 0) {
                 setChange(result.change);
-                setTimeout(() => {
-                    navigate(`/orders/view/${id}`);
-                }, 3000);
-            } else {
-                navigate(`/orders/view/${id}`);
             }
+            setShowPostClose(true);
         } catch (err: any) {
             setError(err.message ?? "Unknown error");
         } finally {
@@ -494,7 +709,7 @@ export default function OrderCheckoutPage() {
                     </div>
                 )}
 
-                {change !== null && change > 0 && (
+                {(!splitMode || allPayersCash) && change !== null && change > 0 && (
                     <div className="bg-green-50 border border-green-300 text-green-800 px-6 py-4 rounded-lg">
                         <div className="font-semibold text-xl">
                             Change: {currency} {change.toFixed(2)}
@@ -505,7 +720,7 @@ export default function OrderCheckoutPage() {
                     </div>
                 )}
 
-                {calculatedChange !== null && calculatedChange > 0 && (
+                {(!splitMode || allPayersCash) && calculatedChange !== null && calculatedChange > 0 && (
                     <div className="bg-blue-50 border border-blue-300 text-gray-800 px-6 py-4 rounded-lg">
                         <div className="font-semibold text-lg">
                             Change to return: {currency} {calculatedChange.toFixed(2)}
@@ -522,6 +737,117 @@ export default function OrderCheckoutPage() {
                 {!loading && !order && (
                     <div className="bg-gray-200 rounded-lg py-12 text-center text-gray-600 text-lg">
                         Order not found.
+                    </div>
+                )}
+
+                {showConfirm && order && (
+                    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black bg-opacity-40">
+                        <div className="bg-white rounded-lg shadow-2xl w-[700px] max-w-[90vw] p-6 space-y-4">
+                            <div className="text-center space-y-1">
+                                <div className="text-lg font-semibold text-gray-800">Confirm closing order</div>
+                                <div className="text-sm text-gray-600">Review totals and proceed to close.</div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2 text-sm text-gray-800 bg-gray-100 rounded-md p-3">
+                                    <div className="flex justify-between">
+                                        <span>Employee</span>
+                                        <span className="font-medium">{order.employeeId || "—"}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Discount</span>
+                                        <span className="font-medium">{discountAmount > 0 ? `- ${currency} ${discountAmount.toFixed(2)}` : "—"}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Service charge</span>
+                                        <span className="font-medium">{serviceChargeAmount > 0 ? `+ ${currency} ${serviceChargeAmount.toFixed(2)}` : "—"}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Tip</span>
+                                        <span className="font-medium">{calculatedTip > 0 ? `+ ${currency} ${calculatedTip.toFixed(2)}` : "—"}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Tax</span>
+                                        <span className="font-medium">{currency} {order.tax.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between font-semibold">
+                                        <span>Total</span>
+                                        <span>{currency} {(order.totalAmount).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                                <div className="space-y-2 text-sm text-gray-800 bg-gray-100 rounded-md p-3">
+                                    <div className="font-semibold text-gray-800">Items</div>
+                                    <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                                        {order.items.map((item) => {
+                                            const name = item.productName || item.serviceName || "Item";
+                                            return (
+                                                <div key={item.id} className="flex justify-between">
+                                                    <span>{item.quantity}x {name}</span>
+                                                    <span>{currency} {item.itemTotal.toFixed(2)}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <button
+                                        onClick={() => navigate(`/orders/receipt/${order.id}`)}
+                                        className="w-full mt-2 bg-gray-300 hover:bg-gray-400 text-gray-900 font-medium py-2 rounded-md"
+                                    >
+                                        Receipt preview
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button
+                                    onClick={() => setShowConfirm(false)}
+                                    className="px-4 py-2 rounded-md bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300"
+                                    disabled={paying}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handlePayAndClose}
+                                    className="px-4 py-2 rounded-md bg-green-500 text-white font-semibold hover:bg-green-600 disabled:opacity-60"
+                                    disabled={paying}
+                                >
+                                    Yes, close order
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {showPostClose && order && (
+                    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black bg-opacity-40">
+                        <div className="bg-white rounded-lg shadow-2xl w-[700px] max-w-[90vw] p-6 space-y-4">
+                            <div className="text-center space-y-1">
+                                <div className="text-lg font-semibold text-gray-800">Order closed</div>
+                                <div className="text-sm text-gray-600">Would you like to view the receipt?</div>
+                            </div>
+                            {change !== null && change > 0 && (
+                                <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-2 rounded-md text-sm text-center">
+                                    Change: {currency} {change.toFixed(2)}
+                                </div>
+                            )}
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button
+                                    onClick={() => {
+                                        setShowPostClose(false);
+                                        navigate(`/orders/view/${id}`);
+                                    }}
+                                    className="px-4 py-2 rounded-md bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300"
+                                >
+                                    Close
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowPostClose(false);
+                                        navigate(`/orders/receipt/${id}`);
+                                    }}
+                                    className="px-4 py-2 rounded-md bg-blue-500 text-white font-semibold hover:bg-blue-600"
+                                >
+                                    Receipt preview
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -603,11 +929,11 @@ export default function OrderCheckoutPage() {
                                         Service charge
                                     </label>
                                     <select
-                                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                                        value={selectedServiceCharge}
-                                        onChange={(e) => setSelectedServiceCharge(e.target.value)}
-                                        disabled={paying}
-                                    >
+                                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                    value={selectedServiceCharge}
+                                    onChange={(e) => setSelectedServiceCharge(e.target.value)}
+                                    disabled={paying}
+                                >
                                         {serviceChargeOptions.map((opt) => (
                                             <option key={opt.id} value={opt.id}>
                                                 {opt.label} {opt.percent > 0 ? `(${opt.percent}%)` : ""}
@@ -680,54 +1006,75 @@ export default function OrderCheckoutPage() {
 
                                 {/* Order Summary */}
                                 <div className="border-t border-gray-300 pt-6 space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Subtotal:</span>
-                                        <span className="text-gray-800 font-medium">{currency} {subtotal.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Tax (21%):</span>
-                                        <span className="text-gray-800 font-medium">+ {currency} {tax.toFixed(2)}</span>
-                                    </div>
-                                    {discountAmount > 0 && (
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-gray-600">Discounts:</span>
-                                            <span className="text-gray-800 font-medium">
-                                                - {currency} {discountAmount.toFixed(2)}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {serviceChargeAmount > 0 && (
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-gray-600">Service charge:</span>
-                                            <span className="text-gray-800 font-medium">
-                                                + {currency} {serviceChargeAmount.toFixed(2)}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {calculatedTip > 0 && (
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-gray-600">Tip:</span>
-                                            <span className="text-gray-800 font-medium">
-                                                + {currency} {calculatedTip.toFixed(2)}
-                                            </span>
-                                        </div>
-                                    )}
-                                    <div className="flex justify-between text-lg font-bold border-t border-gray-300 pt-2 mt-2">
-                                        <span className="text-gray-800">Total:</span>
-                                        <span className="text-gray-800">{currency} {amountDue.toFixed(2)}</span>
-                                    </div>
-                                    {paid > 0 && (
-                                        <>
-                                            <div className="flex justify-between text-sm text-green-700">
-                                                <span>Paid:</span>
-                                                <span className="font-medium">-{currency} {paid.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between text-base font-bold text-orange-700">
-                                                <span>Remaining:</span>
-                                                <span>{currency} {remaining.toFixed(2)}</span>
-                                            </div>
-                                        </>
-                                    )}
+                                    {(() => {
+                                        const displaySubtotal = order?.subTotal ?? subtotal;
+                                        const breakdown = order?.taxBreakdown || [];
+                                        const taxLines = breakdown.length
+                                            ? breakdown.map((t) => ({
+                                                  label: `VAT ${t.ratePercent}% (${t.categoryName || "Tax"})`,
+                                                  amount: t.amount,
+                                              }))
+                                            : [{ label: "Tax", amount: order?.tax ?? tax }];
+                                        const taxTotal = taxLines.reduce((sum, t) => sum + t.amount, 0);
+                                        const baseTotal = displaySubtotal + taxTotal;
+                                        const totalWithAdjustments =
+                                            baseTotal - discountAmount + serviceChargeAmount + calculatedTip;
+
+                                        return (
+                                            <>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-gray-600">Subtotal:</span>
+                                                    <span className="text-gray-800 font-medium">{currency} {displaySubtotal.toFixed(2)}</span>
+                                                </div>
+                                                {taxLines.map((line, idx) => (
+                                                    <div key={idx} className="flex justify-between text-sm">
+                                                        <span className="text-gray-600">{line.label}:</span>
+                                                        <span className="text-gray-800 font-medium">+ {currency} {line.amount.toFixed(2)}</span>
+                                                    </div>
+                                                ))}
+                                                {discountAmount > 0 && (
+                                                    <div className="flex justify-between text-sm">
+                                                        <span className="text-gray-600">Discounts:</span>
+                                                        <span className="text-gray-800 font-medium">
+                                                            - {currency} {discountAmount.toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {serviceChargeAmount > 0 && (
+                                                    <div className="flex justify-between text-sm">
+                                                        <span className="text-gray-600">Service charge:</span>
+                                                        <span className="text-gray-800 font-medium">
+                                                            + {currency} {serviceChargeAmount.toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {calculatedTip > 0 && (
+                                                    <div className="flex justify-between text-sm">
+                                                        <span className="text-gray-600">Tip:</span>
+                                                        <span className="text-gray-800 font-medium">
+                                                            + {currency} {calculatedTip.toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between text-lg font-bold border-t border-gray-300 pt-2 mt-2">
+                                                    <span className="text-gray-800">Total:</span>
+                                                    <span className="text-gray-800">{currency} {totalWithAdjustments.toFixed(2)}</span>
+                                                </div>
+                                                {paid > 0 && (
+                                                    <>
+                                                        <div className="flex justify-between text-sm text-green-700">
+                                                            <span>Paid:</span>
+                                                            <span className="font-medium">-{currency} {paid.toFixed(2)}</span>
+                                                        </div>
+                                                        <div className="flex justify-between text-base font-bold text-orange-700">
+                                                            <span>Remaining:</span>
+                                                            <span>{currency} {remaining.toFixed(2)}</span>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
                                 </div>
 
                                 {/* Previous Payments */}
@@ -786,126 +1133,299 @@ export default function OrderCheckoutPage() {
                                 {/* Payment Form */}
                                 {isOpen(order) ? (
                                     <div className="bg-gray-200 rounded-lg p-6 space-y-4">
-                                        <div className="text-gray-800 font-semibold text-lg">
-                                            Current Payment
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium mb-2 text-gray-800">
-                                                Payment Method
+                                        <div className="flex items-center justify-between">
+                                            <div className="text-gray-800 font-semibold text-lg">
+                                                {splitMode ? "Split Payments" : "Current Payment"}
+                                            </div>
+                                            <label className="flex items-center gap-2 text-sm text-gray-800">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={splitMode}
+                                                    onChange={(e) => setSplitMode(e.target.checked)}
+                                                    disabled={paying}
+                                                />
+                                                <span>Split by items</span>
                                             </label>
-                                            <select
-                                                className="w-full border border-gray-300 rounded-md px-4 py-2 text-gray-800 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-400"
-                                                value={method}
-                                                onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-                                                disabled={paying}
-                                            >
-                                                <option value="CASH">Cash</option>
-                                                <option value="CARD">Card (Stripe)</option>
-                                                <option value="GIFT_CARD">Gift Card</option>
-                                            </select>
                                         </div>
 
-                                        {method === "CASH" && (
-                                            <div>
-                                                <label className="block text-sm font-medium mb-2 text-gray-800">
-                                                    Amount Paid
-                                                </label>
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="text"
-                                                        className="flex-1 border border-gray-300 rounded-md px-4 py-2 text-gray-800 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                                                        value={amountPaid}
-                                                        onChange={(e) => setAmountPaid(e.target.value)}
-                                                        placeholder={amountDue.toFixed(2)}
-                                                        inputMode="decimal"
-                                                        disabled={paying}
-                                                    />
-                                                    <select
-                                                        className="border border-gray-300 rounded-md px-3 py-2 text-gray-800 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-400"
-                                                        value={currency}
-                                                        onChange={(e) => setCurrency(e.target.value)}
-                                                        disabled={paying}
-                                                    >
-                                                        <option value="EUR">EUR</option>
-                                                        <option value="USD">USD</option>
-                                                        <option value="GBP">GBP</option>
-                                                    </select>
-                                                </div>
-                                                <div className="text-xs text-gray-600 mt-1">
-                                                    Cash must be at least the amount due. Change will be calculated.
-                                                </div>
-                                            </div>
-                                        )}
+                                        {splitMode ? (
+                                            <div className="space-y-4">
+                                                <div className="space-y-3">
+                                                    {payers.map((payer, index) => (
+                                                        <div key={index} className="bg-white rounded-md border border-gray-300 p-3 space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="font-semibold text-gray-800">
+                                                            Payer {index + 1}
+                                                        </div>
+                                                        {index > 0 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removePayer(index)}
+                                                                className="text-xs text-red-600 hover:underline"
+                                                                disabled={paying}
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                            <div>
+                                                                <label className="block text-sm font-medium mb-1 text-gray-800">
+                                                                    Payment Method
+                                                                </label>
+                                                                <select
+                                                                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                                                    value={payer.method}
+                                                                    onChange={(e) =>
+                                                                        updatePayerMethod(
+                                                                            index,
+                                                                            e.target.value as PaymentMethod
+                                                                        )
+                                                                    }
+                                                                    disabled={paying}
+                                                                >
+                                                                    <option value="CASH">Cash</option>
+                                                                    <option value="CARD">Card (Stripe)</option>
+                                                                </select>
+                                                            </div>
+                                                            <div className="text-sm text-gray-700">
+                                                                Items total (pre-discount/tax/service): {currency}{" "}
+                                                                {(payerTotals[index] ?? 0).toFixed(2)}
+                                                            </div>
+                                                            <div className="text-sm text-gray-700">
+                                                                Est. tax share: {currency} {(payerTaxShare[index] ?? 0).toFixed(2)}
+                                                            </div>
+                                                            <div className="text-sm font-semibold text-gray-800">
+                                                                Items total (incl. est tax): {currency} {((payerTotals[index] ?? 0) + (payerTaxShare[index] ?? 0)).toFixed(2)}
+                                                            </div>
 
-                                        {/* Total to pay now */}
-                                        <div className="flex justify-between text-lg font-bold border-t border-gray-300 pt-3">
-                                            <span className="text-gray-800">Total to pay now:</span>
-                                            <span className="text-gray-800">{currency} {amountDue.toFixed(2)}</span>
-                                        </div>
-
-                                        {method === "CARD" && (
-                                            <div className="text-xs text-gray-600 bg-blue-50 p-3 rounded-md border border-blue-200">
-                                                <div className="font-medium text-blue-800 mb-1">
-                                                    (i) Simulated Stripe Payment
+                                                            <div className="space-y-2">
+                                                                <div className="text-sm font-medium text-gray-800">
+                                                                    Select items for this payer
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    {order.items
+                                                                        .filter(
+                                                                            (item) =>
+                                                                                itemAssignments[item.id] === undefined ||
+                                                                                itemAssignments[item.id] === index
+                                                                        )
+                                                                        .map((item) => {
+                                                                            const name = item.productName || item.serviceName || "Unknown";
+                                                                            const checked = itemAssignments[item.id] === index;
+                                                                            const subtotalBase = order?.subTotal ?? subtotal;
+                                                                            const taxTotal = order?.tax ?? tax;
+                                                                            const itemTaxShare = subtotalBase > 0 ? (item.itemTotal / subtotalBase) * taxTotal : 0;
+                                                                            const itemGross = item.itemTotal + itemTaxShare;
+                                                                            return (
+                                                                                <label
+                                                                                    key={`${index}-${item.id}`}
+                                                                                    className="flex items-center justify-between bg-gray-100 px-3 py-2 rounded-md text-sm text-gray-800"
+                                                                                >
+                                                                                    <div className="flex flex-col">
+                                                                                        <span className="font-medium">
+                                                                                            {item.quantity}x {name}
+                                                                                        </span>
+                                                                                        <span className="text-gray-700">
+                                                                                            {currency} {itemGross.toFixed(2)} (incl. est tax {currency} {itemTaxShare.toFixed(2)})
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        className="h-4 w-4"
+                                                                                        checked={checked}
+                                                                                        onChange={() =>
+                                                                                            toggleItemAssignment(item.id, index)
+                                                                                        }
+                                                                                        disabled={paying}
+                                                                                    />
+                                                                                </label>
+                                                                            );
+                                                                        })}
+                                                                    {order.items.filter(
+                                                                        (item) =>
+                                                                            itemAssignments[item.id] === undefined ||
+                                                                            itemAssignments[item.id] === index
+                                                                    ).length === 0 && (
+                                                                        <div className="text-xs text-gray-600">
+                                                                            No available items for this payer.
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                                <ul className="space-y-1">
-                                                    <li>- Amounts &lt;= {currency} 100: Immediate success</li>
-                                                    <li>- Amounts &gt; {currency} 100: Requires 3D Secure</li>
-                                                </ul>
-                                            </div>
-                                        )}
 
-                                        {method === "GIFT_CARD" && (
-                                            <div className="space-y-2">
-                                                <label className="block text-sm font-medium mb-2 text-gray-800">
-                                                    Gift Card Code
-                                                </label>
-                                                <div className="flex gap-2 items-center">
-                                                    <input
-                                                        type="text"
-                                                        className={`flex-1 border rounded-md px-4 py-2 text-gray-800 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 ${
-                                                            giftCardValidation?.isValid
-                                                                ? "border-green-500 focus:ring-green-400"
-                                                                : giftCardValidation?.isValid === false
-                                                                ? "border-red-500 focus:ring-red-400"
-                                                                : "border-gray-300 focus:ring-gray-400"
-                                                        }`}
-                                                        value={giftCardCode}
-                                                        onChange={(e) => setGiftCardCode(e.target.value)}
-                                                        placeholder="Enter gift card code"
-                                                        disabled={paying}
-                                                    />
-                                                    {giftCardValidating && (
-                                                        <span className="text-sm text-gray-600">
-                                                            ✓ Validating...
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                {giftCardValidation && giftCardValidation.message && (
-                                                    <div
-                                                        className={`text-xs px-3 py-2 rounded ${
-                                                            giftCardValidation.isValid
-                                                                ? "bg-green-100 text-green-800 border border-green-300"
-                                                                : "bg-red-100 text-red-800 border border-red-300"
-                                                        }`}
-                                                    >
-                                                        {giftCardValidation.message}
+                                                {!allItemsAssigned && (
+                                                    <div className="text-xs text-red-700 mt-1">
+                                                        Assign every item to a payer.
                                                     </div>
                                                 )}
-                                            </div>
-                                        )}
 
-                                        <div className="flex gap-3 pt-2">
+                                                {allPayersCash && (
+                                                    <div className="border-t border-gray-300 pt-3 space-y-2">
+                                                        <label className="block text-sm font-medium text-gray-800">
+                                                            Total cash received
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            className="w-full border border-gray-300 rounded-md px-4 py-2 text-gray-800 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                                            value={amountPaid}
+                                                            onChange={(e) => setAmountPaid(e.target.value)}
+                                                            placeholder={amountDue.toFixed(2)}
+                                                            inputMode="decimal"
+                                                            disabled={paying}
+                                                        />
+                                                        <div className="text-xs text-gray-600">
+                                                            One combined cash amount for all payers. Change will be calculated.
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <div className="flex items-center justify-between pt-2">
+                                                    <div className="text-sm text-gray-700">
+                                                        Remaining items to allocate: {currency} {unassignedItemsTotal.toFixed(2)}
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={addPayer}
+                                                        className="px-3 py-2 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-60"
+                                                        disabled={paying || payers.length >= 6}
+                                                    >
+                                                        Add payer
+                                                    </button>
+                                                </div>
+
+                                                <div className="text-xs text-gray-700 bg-blue-50 border border-blue-200 rounded-md p-3">
+                                                    Discounts, service charges, tax, and tips are applied once at the
+                                                    order level and split across payers based on their assigned item totals.
+                                                </div>
+
+                                                <div className="flex gap-3 pt-2">
+                                                    <button
+                                                        onClick={() => navigate(`/orders/view/${id}`)}
+                                                        className="flex-1 bg-gray-300 hover:bg-gray-400 rounded-md py-3 text-gray-800 font-semibold text-sm transition-colors disabled:opacity-50"
+                                                        disabled={paying}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                    <button
+                                                        onClick={handlePayAndClose}
+                                                        className="flex-1 bg-green-500 hover:bg-green-600 rounded-md py-3 text-white font-semibold text-sm transition-colors disabled:opacity-50"
+                                                        disabled={paying || !allItemsAssigned}
+                                                    >
+                                                        {paying ? "Processing..." : "Split & Close Order"}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div>
+                                                    <label className="block text-sm font-medium mb-2 text-gray-800">
+                                                        Payment Method
+                                                    </label>
+                                                    <select
+                                                        className="w-full border border-gray-300 rounded-md px-4 py-2 text-gray-800 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                                        value={method}
+                                                        onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+                                                        disabled={paying}
+                                                    >
+                                                        <option value="CASH">Cash</option>
+                                                        <option value="CARD">Card (Stripe)</option>
+                                                        <option value="GIFT_CARD">Gift Card</option>
+                                                    </select>
+                                                </div>
+
+                                                {method === "CASH" && (
+                                                    <div>
+                                                        <label className="block text-sm font-medium mb-2 text-gray-800">
+                                                            Amount Paid
+                                                        </label>
+                                                        <div className="flex gap-2">
+                                                            <input
+                                                                type="text"
+                                                                className="flex-1 border border-gray-300 rounded-md px-4 py-2 text-gray-800 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                                                value={amountPaid}
+                                                                onChange={(e) => setAmountPaid(e.target.value)}
+                                                                placeholder={amountDue.toFixed(2)}
+                                                                inputMode="decimal"
+                                                                disabled={paying}
+                                                            />
+                                                        </div>
+                                                        <div className="text-xs text-gray-600 mt-1">
+                                                            Cash must be at least the amount due. Change will be calculated.
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Total to pay now */}
+                                                <div className="flex justify-between text-lg font-bold border-t border-gray-300 pt-3">
+                                                    <span className="text-gray-800">Total to pay now:</span>
+                                                    <span className="text-gray-800">{currency} {amountDue.toFixed(2)}</span>
+                                                </div>
+
+                                                {method === "CARD" && (
+                                                    <div className="text-xs text-gray-600 bg-blue-50 p-3 rounded-md border border-blue-200">
+                                                        <div className="font-medium text-blue-800 mb-1">
+                                                            (i) Simulated Stripe Payment
+                                                        </div>
+                                                        <ul className="space-y-1">
+                                                            <li>- Amounts &lt;= {currency} 100: Immediate success</li>
+                                                            <li>- Amounts &gt; {currency} 100: Requires 3D Secure</li>
+                                                        </ul>
+                                                    </div>
+                                                )}
+
+                                                {method === "GIFT_CARD" && (
+                                                    <div className="space-y-2">
+                                                        <label className="block text-sm font-medium mb-2 text-gray-800">
+                                                            Gift Card Code
+                                                        </label>
+                                                        <div className="flex gap-2 items-center">
+                                                            <input
+                                                                type="text"
+                                                                className={`flex-1 border rounded-md px-4 py-2 text-gray-800 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 ${
+                                                                    giftCardValidation?.isValid
+                                                                        ? "border-green-500 focus:ring-green-400"
+                                                                        : giftCardValidation?.isValid === false
+                                                                        ? "border-red-500 focus:ring-red-400"
+                                                                        : "border-gray-300 focus:ring-gray-400"
+                                                                }`}
+                                                                value={giftCardCode}
+                                                                onChange={(e) => setGiftCardCode(e.target.value)}
+                                                                placeholder="Enter gift card code"
+                                                                disabled={paying}
+                                                            />
+                                                            {giftCardValidating && (
+                                                                <span className="text-sm text-gray-600">
+                                                                    ✓ Validating...
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {giftCardValidation && giftCardValidation.message && (
+                                                            <div
+                                                                className={`text-xs px-3 py-2 rounded ${
+                                                                    giftCardValidation.isValid
+                                                                        ? "bg-green-100 text-green-800 border border-green-300"
+                                                                        : "bg-red-100 text-red-800 border border-red-300"
+                                                                }`}
+                                                            >
+                                                                {giftCardValidation.message}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                <div className="flex gap-3 pt-2">
+                                                    <button
+                                                        onClick={() => navigate(`/orders/view/${id}`)}
+                                                        className="flex-1 bg-gray-300 hover:bg-gray-400 rounded-md py-3 text-gray-800 font-semibold text-sm transition-colors disabled:opacity-50"
+                                                        disabled={paying}
+                                                    >
+                                                        Cancel
+                                                    </button>
                                             <button
-                                                onClick={() => navigate(`/orders/view/${id}`)}
-                                                className="flex-1 bg-gray-300 hover:bg-gray-400 rounded-md py-3 text-gray-800 font-semibold text-sm transition-colors disabled:opacity-50"
-                                                disabled={paying}
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                onClick={handlePayAndClose}
+                                                onClick={() => setShowConfirm(true)}
                                                 className="flex-1 bg-green-500 hover:bg-green-600 rounded-md py-3 text-white font-semibold text-sm transition-colors disabled:opacity-50"
                                                 disabled={
                                                     paying ||
@@ -918,7 +1438,9 @@ export default function OrderCheckoutPage() {
                                                     : `Pay ${currency} ${amountDue.toFixed(2)} & Close`}
                                             </button>
                                         </div>
-                                    </div>
+                                    </>
+                                )}
+                            </div>
                                 ) : (
                                     <div className="bg-gray-200 rounded-lg p-6 text-center">
                                         <div className="font-semibold text-lg text-gray-800">
