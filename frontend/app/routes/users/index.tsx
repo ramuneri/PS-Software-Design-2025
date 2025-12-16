@@ -96,6 +96,62 @@ export default function UsersListPage() {
     );
   }, [users, query]);
 
+  async function handleDeactivate(userId: string) {
+    if (!confirm("Are you sure you want to deactivate this user?")) return;
+
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/users/${userId}`,
+        {
+          method: "DELETE",
+          headers: authHeaders(),
+        }
+      );
+
+      if (res.status === 401) {
+        localStorage.removeItem("access-token");
+        navigate("/login");
+        return;
+      }
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || "Failed to deactivate user");
+      }
+
+      await loadUsers();
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to deactivate user");
+    }
+  }
+
+  async function handleRestore(userId: string) {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/users/${userId}/restore`,
+        {
+          method: "POST",
+          headers: authHeaders(),
+        }
+      );
+
+      if (res.status === 401) {
+        localStorage.removeItem("access-token");
+        navigate("/login");
+        return;
+      }
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || "Failed to restore user");
+      }
+
+      await loadUsers();
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to restore user");
+    }
+  }
+
   return (
     <div className="bg-gray-200 flex flex-col text-black" style={{ height: "calc(100vh - 52px)" }}>
       <div className="p-6 flex-1 flex flex-col overflow-hidden space-y-6">
@@ -119,6 +175,7 @@ export default function UsersListPage() {
               className="bg-gray-200 rounded-md px-3 py-2"
             >
               <option value="">All</option>
+              <option value="Owner">Owner</option>
               <option value="Employee">Employee</option>
               <option value="Customer">Customer</option>
             </select>
@@ -149,11 +206,12 @@ export default function UsersListPage() {
 
         <div className="bg-gray-300 rounded-md flex-1 overflow-hidden">
           <div className="grid grid-cols-12 px-6 py-4 font-medium border-b border-gray-400">
-            <span className="col-span-4">Email</span>
-            <span className="col-span-3">Name</span>
+            <span className="col-span-3">Email</span>
+            <span className="col-span-2">Name</span>
             <span className="col-span-2">Phone</span>
             <span className="col-span-1 text-center">Role</span>
             <span className="col-span-2 text-right">Last login</span>
+            <span className="col-span-2 text-right">Actions</span>
           </div>
 
           <div className="p-4 space-y-3 overflow-y-auto">
@@ -167,17 +225,58 @@ export default function UsersListPage() {
               filtered.map((u) => (
                 <div
                   key={u.id}
-                  onClick={() => navigate(`/users/${u.id}`)}
-                  className={`grid grid-cols-12 px-6 py-4 bg-gray-200 rounded-md cursor-pointer hover:bg-gray-400 transition ${
+                  className={`grid grid-cols-12 px-6 py-4 bg-gray-200 rounded-md ${
                     !u.isActive ? "opacity-50" : ""
                   }`}
                 >
-                  <span className="col-span-4">{u.email}</span>
-                  <span className="col-span-3">{u.name}</span>
+                  <span
+                    className="col-span-3 cursor-pointer hover:underline"
+                    onClick={() => navigate(`/users/${u.id}`)}
+                  >
+                    {u.email}
+                  </span>
+                  <span
+                    className="col-span-2 cursor-pointer hover:underline"
+                    onClick={() => navigate(`/users/${u.id}`)}
+                  >
+                    {u.name}
+                  </span>
                   <span className="col-span-2">{u.phoneNumber ?? "-"}</span>
                   <span className="col-span-1 text-center">{u.role}</span>
                   <span className="col-span-2 text-right">
                     {formatDateTime(u.lastLoginAt)}
+                  </span>
+                  <span className="col-span-2 text-right flex gap-2 justify-end">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/users/${u.id}/edit`);
+                      }}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                    >
+                      Edit
+                    </button>
+                    {u.isActive ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeactivate(u.id);
+                        }}
+                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                      >
+                        Deactivate
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRestore(u.id);
+                        }}
+                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"
+                      >
+                        Restore
+                      </button>
+                    )}
                   </span>
                 </div>
               ))}

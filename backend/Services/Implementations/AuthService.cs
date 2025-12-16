@@ -6,6 +6,7 @@ using System.Text;
 using backend.Data;
 using backend.Data.Models;
 using backend.Dtos;
+using backend.Enums;
 using backend.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -66,7 +67,7 @@ public class AuthService : IAuthService
                 Name: user.Name ?? "",
                 Surname: user.Surname ?? "",
                 PhoneNumber: user.PhoneNumber ?? "",
-                Role: user.Role ?? "Employee",
+                Role: user.Role ?? UserRoles.Employee,
                 IsSuperAdmin: user.IsSuperAdmin,
                 IsActive: user.IsActive,
                 LastLoginAt: user.LastLoginAt,
@@ -142,6 +143,9 @@ public class AuthService : IAuthService
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email!),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim("role", user.Role ?? UserRoles.Employee),
+            new Claim("merchantId", user.MerchantId?.ToString() ?? ""),
+            new Claim("isSuperAdmin", user.IsSuperAdmin.ToString().ToLower())
         };
 
         var token = new JwtSecurityToken(

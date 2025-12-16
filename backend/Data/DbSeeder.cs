@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using backend.Data.Models;
+using backend.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -84,7 +85,7 @@ namespace backend.Data
                     UserName = email,
                     Email = email,
                     MerchantId = merchant.MerchantId,
-                    Role = "Employee",
+                    Role = UserRoles.Employee,
                     CreatedAt = DateTime.UtcNow,
                     LastLoginAt = DateTime.UtcNow
                 };
@@ -128,7 +129,7 @@ namespace backend.Data
                     UserName = email,
                     Email = email,
                     MerchantId = merchant.MerchantId,
-                    Role = "Customer",
+                    Role = UserRoles.Customer,
                     CreatedAt = DateTime.UtcNow,
                     LastLoginAt = DateTime.UtcNow
                 };

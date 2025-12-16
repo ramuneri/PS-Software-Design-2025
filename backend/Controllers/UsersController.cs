@@ -1,8 +1,11 @@
 using backend.Data;
+using backend.Data.Models;
 using backend.Dtos;
+using backend.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace backend.Controllers;
 
@@ -12,11 +15,41 @@ namespace backend.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
-    private const int TEST_MERCHANT_ID = 1;
 
     public UsersController(ApplicationDbContext db)
     {
         _db = db;
+    }
+
+    private string? GetCurrentUserId()
+    {
+        return User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue("sub");
+    }
+
+    private int? GetCurrentUserMerchantId()
+    {
+        var merchantIdClaim = User.FindFirstValue("merchantId");
+        if (string.IsNullOrEmpty(merchantIdClaim) || !int.TryParse(merchantIdClaim, out var merchantId))
+            return null;
+        return merchantId;
+    }
+
+    private string? GetCurrentUserRole()
+    {
+        return User.FindFirstValue("role");
+    }
+
+    private bool IsCurrentUserSuperAdmin()
+    {
+        var isSuperAdminClaim = User.FindFirstValue("isSuperAdmin");
+        return bool.TryParse(isSuperAdminClaim, out var isSuperAdmin) && isSuperAdmin;
+    }
+
+    private bool CanManageUsers()
+    {
+        var role = GetCurrentUserRole();
+        return IsCurrentUserSuperAdmin() || role == UserRoles.Owner;
     }
 
     [HttpGet]
@@ -24,8 +57,12 @@ public class UsersController : ControllerBase
         [FromQuery] string? role,
         [FromQuery] bool includeInactive = false)
     {
+        var merchantId = GetCurrentUserMerchantId();
+        if (merchantId == null)
+            return Unauthorized("Merchant ID not found in token");
+
         var query = _db.Users
-            .Where(u => u.MerchantId == TEST_MERCHANT_ID);
+            .Where(u => u.MerchantId == merchantId);
 
         if (!includeInactive)
             query = query.Where(u => u.IsActive);
@@ -53,8 +90,12 @@ public class UsersController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<UserDto>> GetUserById(string id)
     {
+        var merchantId = GetCurrentUserMerchantId();
+        if (merchantId == null)
+            return Unauthorized("Merchant ID not found in token");
+
         var user = await _db.Users
-            .FirstOrDefaultAsync(u => u.Id == id && u.MerchantId == TEST_MERCHANT_ID);
+            .FirstOrDefaultAsync(u => u.Id == id && u.MerchantId == merchantId);
 
         if (user == null)
             return NotFound();
@@ -78,11 +119,26 @@ public class UsersController : ControllerBase
     [HttpPatch("{id}")]
     public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserDto dto)
     {
+        if (!CanManageUsers())
+            return Forbid("Only Owners and SuperAdmins can manage users");
+
+        var merchantId = GetCurrentUserMerchantId();
+        if (merchantId == null)
+            return Unauthorized("Merchant ID not found in token");
+
         var user = await _db.Users
-            .FirstOrDefaultAsync(u => u.Id == id && u.MerchantId == TEST_MERCHANT_ID);
+            .FirstOrDefaultAsync(u => u.Id == id && u.MerchantId == merchantId);
 
         if (user == null)
             return NotFound();
+
+        // Prevent changing role to Owner unless current user is SuperAdmin
+        if (dto.Role == UserRoles.Owner && !IsCurrentUserSuperAdmin())
+            return Forbid("Only SuperAdmins can assign Owner role");
+
+        // Prevent changing SuperAdmin status
+        if (dto.Role != null && user.IsSuperAdmin && dto.Role != user.Role)
+            return Forbid("Cannot change role of SuperAdmin");
 
         if (dto.Name != null) user.Name = dto.Name;
         if (dto.Surname != null) user.Surname = dto.Surname;
@@ -98,11 +154,27 @@ public class UsersController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeactivateUser(string id)
     {
+        if (!CanManageUsers())
+            return Forbid("Only Owners and SuperAdmins can manage users");
+
+        var merchantId = GetCurrentUserMerchantId();
+        if (merchantId == null)
+            return Unauthorized("Merchant ID not found in token");
+
         var user = await _db.Users
-            .FirstOrDefaultAsync(u => u.Id == id && u.MerchantId == TEST_MERCHANT_ID);
+            .FirstOrDefaultAsync(u => u.Id == id && u.MerchantId == merchantId);
 
         if (user == null)
             return NotFound();
+
+        // Prevent deactivating SuperAdmins
+        if (user.IsSuperAdmin)
+            return Forbid("Cannot deactivate SuperAdmin");
+
+        // Prevent deactivating yourself
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == id)
+            return BadRequest("Cannot deactivate yourself");
 
         user.IsActive = false;
         user.UpdatedAt = DateTime.UtcNow;
@@ -114,8 +186,15 @@ public class UsersController : ControllerBase
     [HttpPost("{id}/restore")]
     public async Task<IActionResult> RestoreUser(string id)
     {
+        if (!CanManageUsers())
+            return Forbid("Only Owners and SuperAdmins can manage users");
+
+        var merchantId = GetCurrentUserMerchantId();
+        if (merchantId == null)
+            return Unauthorized("Merchant ID not found in token");
+
         var user = await _db.Users
-            .FirstOrDefaultAsync(u => u.Id == id && u.MerchantId == TEST_MERCHANT_ID);
+            .FirstOrDefaultAsync(u => u.Id == id && u.MerchantId == merchantId);
 
         if (user == null)
             return NotFound();
