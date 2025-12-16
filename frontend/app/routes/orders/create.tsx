@@ -197,7 +197,7 @@ export default function CreateOrderPage() {
             : null;
 
         const basePrice = selectedProduct.price || 0;
-        const adjustedPrice = variation ? basePrice + variation.priceAdjustment : basePrice;
+        const adjustedPrice = variation ? variation.priceAdjustment : basePrice;
         
         const existingItem = items.find(
             (item) => item.productId === selectedProduct.id && item.variationId === selectedVariation
@@ -296,15 +296,12 @@ export default function CreateOrderPage() {
                                                 <div className="font-medium text-gray-800">
                                                     {variation.name}
                                                 </div>
-                                                {variation.priceAdjustment !== 0 && (
-                                                    <div className="text-xs text-gray-500">
-                                                        {variation.priceAdjustment > 0 ? "+" : ""}
-                                                        ${variation.priceAdjustment.toFixed(2)}
-                                                    </div>
-                                                )}
+                                                <div className="text-xs text-gray-500">
+                                                    Price: ${variation.priceAdjustment.toFixed(2)}
+                                                </div>
                                             </div>
                                             <span className="text-gray-600 font-medium">
-                                                ${((selectedProduct.price || 0) + variation.priceAdjustment).toFixed(2)}
+                                                ${variation.priceAdjustment.toFixed(2)}
                                             </span>
                                         </div>
                                     </button>
