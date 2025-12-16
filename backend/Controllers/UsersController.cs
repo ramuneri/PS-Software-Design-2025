@@ -24,6 +24,8 @@ public class UsersController : ControllerBase
         [FromQuery] string? role,
         [FromQuery] bool includeInactive = false)
     {
+        await EnsureCustomerIdentityUsers(TEST_MERCHANT_ID);
+
         var query = _db.Users
             .Where(u => u.MerchantId == TEST_MERCHANT_ID);
 
@@ -47,6 +49,70 @@ public class UsersController : ControllerBase
             .ToListAsync();
 
         return Ok(users);
+    }
+
+    private async Task EnsureCustomerIdentityUsers(int merchantId)
+    {
+        // For any customer without a matching identity user, create a lightweight user entry
+        // so they appear in dropdowns (reservations customer selection).
+        var customers = await _db.Customers
+            .Where(c => c.MerchantId == merchantId)
+            .ToListAsync();
+
+        var existingNormalizedEmails = await _db.Users
+            .Where(u => u.MerchantId == merchantId)
+            .Select(u => u.NormalizedEmail)
+            .ToListAsync();
+
+        var toAdd = new List<backend.Data.Models.User>();
+        var now = DateTime.UtcNow;
+
+        foreach (var c in customers)
+        {
+            var email = c.Email?.Trim() ?? string.Empty;
+            var normalizedEmail = string.IsNullOrWhiteSpace(email) ? null : email.ToUpperInvariant();
+
+            var alreadyHasUser = !string.IsNullOrWhiteSpace(normalizedEmail) &&
+                                 existingNormalizedEmails.Any(e => e == normalizedEmail);
+            if (alreadyHasUser) continue;
+
+            var userId = Guid.NewGuid().ToString();
+            var username = string.IsNullOrWhiteSpace(email)
+                ? $"customer-{userId}"
+                : email;
+
+            toAdd.Add(new backend.Data.Models.User
+            {
+                Id = userId,
+                MerchantId = merchantId,
+                Name = c.Name,
+                Surname = c.Surname,
+                Email = email,
+                NormalizedEmail = normalizedEmail,
+                UserName = username,
+                NormalizedUserName = username.ToUpperInvariant(),
+                PhoneNumber = c.Phone,
+                Role = "Customer",
+                IsActive = c.IsActive,
+                EmailConfirmed = false,
+                PhoneNumberConfirmed = false,
+                TwoFactorEnabled = false,
+                LockoutEnabled = false,
+                AccessFailedCount = 0,
+                PasswordHash = string.Empty,
+                CreatedAt = now,
+                UpdatedAt = now,
+                LastLoginAt = now,
+                SecurityStamp = Guid.NewGuid().ToString(),
+                ConcurrencyStamp = Guid.NewGuid().ToString()
+            });
+        }
+
+        if (toAdd.Count > 0)
+        {
+            _db.Users.AddRange(toAdd);
+            await _db.SaveChangesAsync();
+        }
     }
 
 

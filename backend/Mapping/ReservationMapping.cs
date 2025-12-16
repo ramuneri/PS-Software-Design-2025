@@ -7,18 +7,28 @@ public static class ReservationMapping
 {
     public static ReservationDto ToDto(this Reservation entity)
     {
+        string BuildUserName(User? user)
+        {
+            if (user == null) return string.Empty;
+            var full = $"{user.Name ?? ""} {user.Surname ?? ""}".Trim();
+            if (!string.IsNullOrWhiteSpace(full)) return full;
+            return user.Email ?? "";
+        }
+
         return new ReservationDto(
             entity.Id,
             entity.EmployeeId,
-            entity.Employee?.Name ?? entity.Employee?.Email,
+            BuildUserName(entity.Employee),
             entity.CustomerId,
-            entity.Customer?.Name ?? entity.Customer?.Email,
+            BuildUserName(entity.Customer),
+            entity.Customer?.Email,
             entity.ServiceId,
             entity.Service?.Name,
             entity.Status ?? "Booked",
-            entity.StartTime!.Value,
-            entity.EndTime!.Value,
-            entity.BookedAt!.Value,
+            entity.StartTime ?? DateTime.MinValue,
+            entity.EndTime ?? (entity.StartTime ?? DateTime.MinValue),
+            entity.BookedAt ?? DateTime.MinValue,
+            entity.Note,
             entity.IsActive
         );
     }

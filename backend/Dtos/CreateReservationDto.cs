@@ -5,5 +5,7 @@ public record CreateReservationDto
     string CustomerId,
     string EmployeeId,
     int ServiceId,
-    DateTime StartTime
+    DateTime StartTime,
+    DateTime? EndTime,
+    string? Note
 );

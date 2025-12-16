@@ -33,14 +33,46 @@ export default function ReservationsCalendar() {
   const [weekStart, setWeekStart] = useState(() => getStartOfWeek(new Date()));
   const [loading, setLoading] = useState(true);
 
-  const hours = useMemo(
-    () =>
-      Array.from(
-        { length: WORK_END_HOUR - WORK_START_HOUR },
-        (_, i) => WORK_START_HOUR + i
-      ),
-    []
-  );
+  const weekEnd = useMemo(() => {
+    const end = new Date(weekStart);
+    end.setDate(weekStart.getDate() + 7);
+    end.setHours(0, 0, 0, 0);
+    return end;
+  }, [weekStart]);
+
+  const hours = useMemo(() => {
+    const relevant = reservations.filter((r) => {
+      const start = new Date(r.startTime);
+      if (Number.isNaN(start.getTime())) return false;
+      return start >= weekStart && start < weekEnd;
+    });
+
+    let minHour = WORK_START_HOUR;
+    let maxHour = WORK_END_HOUR;
+
+    relevant.forEach((r) => {
+      const start = new Date(r.startTime);
+      const end = new Date(r.endTime);
+
+      if (!Number.isNaN(start.getTime())) {
+        minHour = Math.min(minHour, start.getHours());
+        maxHour = Math.max(maxHour, start.getHours() + 1);
+      }
+
+      if (!Number.isNaN(end.getTime())) {
+        const endHour = end.getHours() + (end.getMinutes() > 0 ? 1 : 0);
+        maxHour = Math.max(maxHour, endHour);
+      }
+    });
+
+    minHour = Math.max(0, minHour);
+    maxHour = Math.min(23, maxHour);
+
+    return Array.from(
+      { length: maxHour - minHour + 1 },
+      (_, i) => minHour + i
+    );
+  }, [reservations, weekEnd, weekStart]);
 
   const days = useMemo(
     () =>
@@ -60,7 +92,8 @@ export default function ReservationsCalendar() {
         { headers: authHeaders() }
       );
       const data = await res.json();
-      setReservations(data);
+      const list = Array.isArray(data) ? data : Array.isArray(data.data) ? data.data : [];
+      setReservations(list);
       setLoading(false);
     }
 
@@ -116,10 +149,13 @@ export default function ReservationsCalendar() {
               {days.map((day) => {
                 const matches = reservations.filter((r) => {
                   const start = new Date(r.startTime);
-                  return (
-                    start.getHours() === hour &&
-                    start.toDateString() === day.toDateString()
-                  );
+                  if (Number.isNaN(start.getTime())) return false;
+                  const sameDay =
+                    start.getFullYear() === day.getFullYear() &&
+                    start.getMonth() === day.getMonth() &&
+                    start.getDate() === day.getDate();
+                  if (!sameDay) return false;
+                  return start.getHours() === hour;
                 });
 
                 return (

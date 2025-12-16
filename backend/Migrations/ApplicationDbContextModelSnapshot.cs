@@ -200,6 +200,9 @@ namespace backend.Migrations
                     b.Property<string>("Surname")
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.HasKey("Id");
 
                     b.ToTable("Customers", "identity");
@@ -808,6 +811,9 @@ namespace backend.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text");
 
                     b.Property<int?>("ServiceId")
                         .HasColumnType("integer");
