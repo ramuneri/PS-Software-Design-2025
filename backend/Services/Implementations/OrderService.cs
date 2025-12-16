@@ -55,7 +55,7 @@ public class OrderService : IOrderService
             List<SplitPaymentRequest> splits,
             TipRequest? tipRequest,
             decimal? discountAmount = null,
-            decimal? serviceChargeAmount = null)
+        decimal? serviceChargeAmount = null)
     {
         // Load order with related data
         var order = await context.Orders
@@ -139,6 +139,12 @@ public class OrderService : IOrderService
 
             var payerTotal = itemsSubtotal - payerDiscount + payerService + itemsTax + payerTip;
 
+            var normalizedMethod = split.Method.ToUpper();
+            var provider = split.Provider ?? (normalizedMethod == "CARD" ? "STRIPE" : null);
+            var idempotencyKey = normalizedMethod == "CARD"
+                ? $"order-{orderId}-split-{payerIndex}-{Guid.NewGuid():N}"
+                : null;
+
             allocations.Add(new SplitAllocation(
                 payerIndex,
                 itemsSubtotal,
@@ -147,7 +153,13 @@ public class OrderService : IOrderService
                 payerService,
                 payerTip,
                 payerTotal,
-                new PaymentRequest(split.Method, payerTotal, split.Currency, null, null)
+                new PaymentRequest(
+                    normalizedMethod,
+                    payerTotal,
+                    split.Currency,
+                    provider,
+                    idempotencyKey
+                )
             ));
             payerIndex++;
         }
