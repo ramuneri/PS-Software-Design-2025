@@ -32,6 +32,8 @@ namespace backend.Data
 
             var merchant = await SeedMerchantAsync();
 
+            var superAdmin = await SeedSuperAdminUserAsync(merchant);
+            var owner = await SeedOwnerUserAsync(merchant);
             var employee = await SeedEmployeeUserAsync(merchant);
             var customer = await SeedCustomerUserAsync(merchant);
 
@@ -70,6 +72,105 @@ namespace backend.Data
             return merchant;
         }
 
+
+        private async Task<User> SeedSuperAdminUserAsync(Merchant merchant)
+        {
+            const string email = "admin@test.com";
+            const string password = "test123";
+
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    UserName = email,
+                    Email = email,
+                    MerchantId = merchant.MerchantId,
+                    Role = UserRoles.Owner,
+                    IsSuperAdmin = true,
+                    CreatedAt = DateTime.UtcNow,
+                    LastLoginAt = DateTime.UtcNow
+                };
+
+                var result = await _userManager.CreateAsync(user, password);
+
+                if (!result.Succeeded)
+                {
+                    var errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
+                    _logger.LogError("Failed to seed super admin user: {Error}", errorMsg);
+                }
+                else
+                {
+                    _logger.LogInformation("Seeded SuperAdmin user {Email}", email);
+                }
+            }
+            else
+            {
+                // Update existing user to ensure SuperAdmin status
+                if (!user.IsSuperAdmin || user.Role != UserRoles.Owner)
+                {
+                    user.IsSuperAdmin = true;
+                    user.Role = UserRoles.Owner;
+                    user.MerchantId = merchant.MerchantId;
+                    await _db.SaveChangesAsync();
+                    _logger.LogInformation("Updated user to SuperAdmin: {Email}", email);
+                }
+                else if (user.MerchantId != merchant.MerchantId)
+                {
+                    user.MerchantId = merchant.MerchantId;
+                    await _db.SaveChangesAsync();
+                    _logger.LogInformation("Updated SuperAdmin user to correct MerchantId");
+                }
+            }
+
+            return user;
+        }
+
+        private async Task<User> SeedOwnerUserAsync(Merchant merchant)
+        {
+            const string email = "owner@test.com";
+            const string password = "test123";
+
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    UserName = email,
+                    Email = email,
+                    MerchantId = merchant.MerchantId,
+                    Role = UserRoles.Owner,
+                    IsSuperAdmin = false,
+                    CreatedAt = DateTime.UtcNow,
+                    LastLoginAt = DateTime.UtcNow
+                };
+
+                var result = await _userManager.CreateAsync(user, password);
+
+                if (!result.Succeeded)
+                {
+                    var errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
+                    _logger.LogError("Failed to seed owner user: {Error}", errorMsg);
+                }
+                else
+                {
+                    _logger.LogInformation("Seeded Owner user {Email}", email);
+                }
+            }
+            else
+            {
+                if (user.MerchantId != merchant.MerchantId)
+                {
+                    user.MerchantId = merchant.MerchantId;
+                    await _db.SaveChangesAsync();
+                    _logger.LogInformation("Updated owner user to correct MerchantId");
+                }
+            }
+
+            return user;
+        }
 
         private async Task<User> SeedEmployeeUserAsync(Merchant merchant)
         {
