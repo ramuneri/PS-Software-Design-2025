@@ -16,5 +16,6 @@ public record OrderDto(
     Status Status,
     DateTime CreatedAt,
     DateTime? ClosedAt,
-    DateTime? CancelledAt
+    DateTime? CancelledAt,
+    List<OrderTaxBreakdownDto>? TaxBreakdown
 );

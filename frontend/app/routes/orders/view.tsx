@@ -22,6 +22,10 @@ type OrderDetail = {
     note: string | null;
     items: OrderItem[];
     status: number;
+    taxBreakdown?: { taxCategoryId: number; categoryName: string; ratePercent: number; amount: number }[];
+    subTotal?: number;
+    tax?: number;
+    payments?: { method: string; amount: number; currency: string }[];
 };
 
 type Product = {
@@ -226,6 +230,25 @@ export default function OrderViewPage() {
                                             <div className="bg-gray-200 rounded-md px-4 py-3 text-black font-medium">
                                                 ${order.totalAmount.toFixed(2)}
                                             </div>
+                                            {order.status !== 0 && (
+                                                <button
+                                                    onClick={() => navigate(`/orders/receipt/${order.id}`)}
+                                                    className="mt-3 w-full bg-gray-800 text-white rounded-md py-2 hover:bg-gray-900 text-sm font-semibold"
+                                                >
+                                                    View receipt
+                                                </button>
+                                            )}
+                                            {order.status !== 0 && order.payments && order.payments.length > 0 && (
+                                                <div className="text-xs text-gray-700 space-y-1">
+                                                    <div className="font-semibold">Payments</div>
+                                                    {order.payments.map((p, idx) => (
+                                                        <div key={idx} className="flex justify-between">
+                                                            <span>{p.method}</span>
+                                                            <span>{p.currency} {p.amount.toFixed(2)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -268,6 +291,25 @@ export default function OrderViewPage() {
                                                 </div>
                                             )}
                                         </div>
+
+                                        {order.taxBreakdown && order.taxBreakdown.length > 0 && (
+                                            <div className="mt-4 space-y-1 text-sm text-gray-800 px-4">
+                                                <div className="flex justify-between font-medium">
+                                                    <span>Subtotal</span>
+                                                    <span>{order.subTotal?.toFixed(2) ?? ""}</span>
+                                                </div>
+                                                {order.taxBreakdown.map((t) => (
+                                                    <div key={`${t.taxCategoryId}-${t.ratePercent}`} className="flex justify-between">
+                                                        <span>{`VAT ${t.ratePercent}% (${t.categoryName || "Tax"})`}</span>
+                                                        <span>{t.amount.toFixed(2)}</span>
+                                                    </div>
+                                                ))}
+                                                <div className="flex justify-between font-semibold border-t border-gray-400 pt-1">
+                                                    <span>Total</span>
+                                                    <span>{order.totalAmount.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

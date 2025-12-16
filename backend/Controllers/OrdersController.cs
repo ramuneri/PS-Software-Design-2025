@@ -78,6 +78,34 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         return Ok(cancelledOrder);
     }
 
+    [HttpPost("{id:int}/split-close")]
+    public async Task<ActionResult<CloseOrderResponse>> CloseOrderSplit(
+        int id,
+        [FromBody] SplitCloseOrderRequest request)
+    {
+        var (order, change, paymentIntentId, requires3DS, error) =
+            await orderService.CloseOrderWithItemSplits(
+                id,
+                request.Splits,
+                request.Tip,
+                request.DiscountAmount,
+                request.ServiceChargeAmount
+            );
+
+        if (error != null)
+            return BadRequest(new { message = error });
+
+        if (order == null)
+            return NotFound();
+
+        return Ok(new CloseOrderResponse(
+            Order: order,
+            Change: change,
+            PaymentIntentId: paymentIntentId,
+            Requires3DS: requires3DS
+        ));
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteOrder([FromRoute] int id)
     {
