@@ -63,6 +63,8 @@ public class OrderService : IOrderService
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Service)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.ProductVariation)
             .Include(o => o.Payments)
             .Include(o => o.OrderTips)
             .FirstOrDefaultAsync(o => o.Id == orderId);
@@ -99,6 +101,12 @@ public class OrderService : IOrderService
         foreach (var oi in order.OrderItems)
         {
             decimal price = oi.Product?.Price ?? oi.Service?.DefaultPrice ?? 0;
+            
+            if (oi.ProductVariationId != null && oi.ProductVariation != null)
+            {
+                price += oi.ProductVariation.PriceAdjustment;
+            }
+    
             var itemTotal = price * oi.Quantity;
             decimal taxRate = 0;
             if (oi.Product?.TaxCategoryId is int pcid)
@@ -163,8 +171,10 @@ public class OrderService : IOrderService
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Service)
-            .Include(o => o.Payments)  // ADDED: Include payments
-            .Include(o => o.OrderTips)  // ADDED: Include tips
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.ProductVariation)
+            .Include(o => o.Payments)
+            .Include(o => o.OrderTips)
             .ToListAsync();
 
         var orderDtos = new List<OrderDto>();
@@ -226,6 +236,8 @@ public class OrderService : IOrderService
                 .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Service)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.ProductVariation)
             .Include(o => o.Payments)
             .Include(o => o.OrderTips)
             .FirstOrDefaultAsync(o => o.Id == id);
@@ -300,13 +312,24 @@ public class OrderService : IOrderService
         {
             OrderId = order.Id,
             ProductId = item.ProductId,
-            Quantity = item.Quantity
+            Quantity = item.Quantity,
+            ProductVariationId = item.ProductVariationId
         }).ToList();
 
         await context.OrderItems.AddRangeAsync(orderItemEntities);
         await context.SaveChangesAsync();
+        
+        order = await context.Orders
+            .Include(o => o.OrderItems)
+            .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderItems)
+            .ThenInclude(oi => oi.Service)
+            .Include(o => o.OrderItems)
+            .ThenInclude(oi => oi.ProductVariation)
+            .FirstOrDefaultAsync(o => o.Id == order.Id);
 
-        order.OrderItems = orderItemEntities;
+        if (order == null) return null;
+
         var (orderItemDtos, subTotal, taxTotal) = await CalculateTotals(order);
         var calcTotals = await orderCalculator.CalculateOrderTotalsAsync(order);
 
@@ -338,35 +361,36 @@ public class OrderService : IOrderService
         {
             return null;
         }
-        
+    
         if (customerIdentifier != null)
         {
             order.CustomerIdentifier = customerIdentifier;
         }
-        
+    
         if (note != null)
         {
             order.Note = note;
         }
-        
+    
         if (items != null)
         {
             var itemsList = items.ToList();
-            
+        
             context.OrderItems.RemoveRange(order.OrderItems);
-            
+        
             var newOrderItems = itemsList.Select(item => new OrderItem
             {
                 OrderId = order.Id,
                 ProductId = item.ProductId,
-                Quantity = item.Quantity
+                Quantity = item.Quantity,
+                ProductVariationId = item.ProductVariationId
             }).ToList();
-        
+    
             await context.OrderItems.AddRangeAsync(newOrderItems);
         }
 
         await context.SaveChangesAsync();
-        
+    
         return await GetOrder(id);
     }
 
@@ -444,6 +468,8 @@ public class OrderService : IOrderService
                     .ThenInclude(oi => oi.Product)
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Service)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.ProductVariation)
                 .Include(o => o.Payments)
                 .Include(o => o.OrderTips)
                 .FirstOrDefaultAsync(o => o.Id == orderId);
@@ -652,8 +678,16 @@ public class OrderService : IOrderService
             if (orderItem.ProductId != null && orderItem.Product != null)
             {
                 var product = orderItem.Product;
-                var itemTotal = product.Price * orderItem.Quantity;
-                subTotal += itemTotal ?? 0;
+                
+                decimal basePrice = product.Price ?? 0;
+                
+                if (orderItem.ProductVariationId != null && orderItem.ProductVariation != null)
+                {
+                    basePrice += orderItem.ProductVariation.PriceAdjustment;
+                }
+
+                var itemTotal = basePrice * orderItem.Quantity;
+                subTotal += itemTotal;
 
                 decimal taxRate = 0;
                 if (product.TaxCategoryId.HasValue)
@@ -662,7 +696,7 @@ public class OrderService : IOrderService
                     taxRate = await _taxService.GetRatePercentAtAsync(product.TaxCategoryId.Value, at);
                 }
 
-                var itemTax = Math.Round((itemTotal ?? 0) * (taxRate / 100m), 2);
+                var itemTax = Math.Round(itemTotal * (taxRate / 100m), 2);
                 taxTotal += itemTax;
 
                 orderItemDtos.Add(new OrderItemDto(
@@ -670,9 +704,11 @@ public class OrderService : IOrderService
                     orderItem.OrderId,
                     orderItem.ProductId ?? 0,
                     orderItem.Quantity,
-                    itemTotal ?? 0,
+                    itemTotal,
                     product.Name,
-                    null
+                    null,
+                    orderItem.ProductVariationId,
+                    orderItem.ProductVariation?.Name
                 ));
             }
             else if (orderItem.ServiceId != null && orderItem.Service != null)
@@ -698,7 +734,9 @@ public class OrderService : IOrderService
                     orderItem.Quantity,
                     itemTotal ?? 0,
                     null,
-                    service.Name
+                    service.Name,
+                    null,
+                    null
                 ));
             }
         }

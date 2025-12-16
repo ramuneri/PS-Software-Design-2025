@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using backend.Data;
@@ -11,9 +12,11 @@ using backend.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251216115542_AddProductVariations")]
+    partial class AddProductVariations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -495,9 +498,6 @@ namespace backend.Migrations
                     b.Property<int?>("ProductId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("ProductVariationId")
-                        .HasColumnType("integer");
-
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
@@ -512,8 +512,6 @@ namespace backend.Migrations
                     b.HasIndex("OrderId");
 
                     b.HasIndex("ProductId");
-
-                    b.HasIndex("ProductVariationId");
 
                     b.HasIndex("ReservationId");
 
@@ -1236,11 +1234,6 @@ namespace backend.Migrations
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("backend.Data.Models.ProductVariation", "ProductVariation")
-                        .WithMany()
-                        .HasForeignKey("ProductVariationId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("backend.Data.Models.Reservation", "Reservation")
                         .WithMany("OrderItems")
                         .HasForeignKey("ReservationId")
@@ -1254,8 +1247,6 @@ namespace backend.Migrations
                     b.Navigation("Order");
 
                     b.Navigation("Product");
-
-                    b.Navigation("ProductVariation");
 
                     b.Navigation("Reservation");
 

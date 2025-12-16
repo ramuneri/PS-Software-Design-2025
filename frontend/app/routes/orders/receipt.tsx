@@ -9,6 +9,8 @@ type OrderItem = {
     itemTotal: number;
     productName?: string;
     serviceName?: string;
+    productVariationId?: number;
+    productVariationName?: string;
 };
 
 type TaxBreakdown = {
@@ -162,7 +164,14 @@ export default function OrderReceiptPage() {
                                     const name = item.productName || item.serviceName || "Item";
                                     return (
                                         <div key={item.id} className="flex justify-between">
-                                            <span>{item.quantity}x {name}</span>
+                                            <div>
+                                                <div>{item.quantity}x {name}</div>
+                                                {item.productVariationName && (
+                                                    <div className="text-xs text-gray-500">
+                                                        + {item.productVariationName}
+                                                    </div>
+                                                )}
+                                            </div>
                                             <span>{currency} {item.itemTotal.toFixed(2)}</span>
                                         </div>
                                     );
