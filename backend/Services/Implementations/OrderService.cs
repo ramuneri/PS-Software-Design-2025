@@ -2,7 +2,10 @@ using backend.Data;
 using backend.Data.Models;
 using backend.Dtos;
 using backend.Enums;
+using backend.Services;
 using backend.Services.Interfaces;
+using backend.Services.Implementations;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,58 +15,68 @@ public class OrderService : IOrderService
 {
     private readonly ApplicationDbContext context;
     private readonly IProductService productService;
+    private readonly IPaymentValidationService paymentValidator;
+    private readonly IOrderCalculatorService orderCalculator;
+    private readonly IStripePaymentService stripeService;
+    private readonly ITaxService _taxService;
+    private readonly IGiftCardService _giftCardService;
 
-    public OrderService(ApplicationDbContext context, IProductService productService)
+    public OrderService(
+        ApplicationDbContext context,
+        IProductService productService,
+        IPaymentValidationService paymentValidator,
+        IOrderCalculatorService orderCalculator,
+        IStripePaymentService stripeService,
+        ITaxService taxService,
+        IGiftCardService giftCardService)
     {
         this.context = context;
         this.productService = productService;
+        this.paymentValidator = paymentValidator;
+        this.orderCalculator = orderCalculator;
+        this.stripeService = stripeService;
+        _taxService = taxService;
+        _giftCardService = giftCardService;
     }
 
     public async Task<IEnumerable<OrderDto>> GetOrders()
     {
         var orders = await context.Orders
             .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Service)
+            .Include(o => o.Payments)  // ADDED: Include payments
+            .Include(o => o.OrderTips)  // ADDED: Include tips
             .ToListAsync();
 
         var orderDtos = new List<OrderDto>();
 
         foreach (var order in orders)
         {
-            decimal subTotal = 0;
-            var orderItemDtos = new List<OrderItemDto>();
+            var (orderItemDtos, subTotal, taxTotal) = await CalculateTotals(order);
 
-            foreach (var orderItem in order.OrderItems)
-            {
-                var product = await productService.GetByIdAsync(orderItem.ProductId!.Value);
-
-                if (product != null)
-                {
-                    var itemTotal = product.Price * orderItem.Quantity;
-                    subTotal += itemTotal ?? 0;
-
-                    orderItemDtos.Add(new OrderItemDto(
-                        orderItem.Id,
-                        orderItem.OrderId,
-                        orderItem.ProductId ?? 0,
-                        orderItem.Quantity,
-                        itemTotal ?? 0
-                    ));
-                }
-            }
-            
             var status = order.CancelledAt is not null ? Status.Cancelled :
                 order.ClosedAt is not null ? Status.Closed :
                 Status.Open;
-            
+
             orderDtos.Add(new OrderDto(
                 order.Id,
                 order.EmployeeId,
                 order.CustomerIdentifier,
                 orderItemDtos,
-                null,
+                order.Payments?.Select(p => new PaymentDto(
+                    p.PaymentId,
+                    p.OrderId,
+                    p.Method,
+                    p.Amount,
+                    p.Provider,
+                    p.Currency,
+                    p.PaymentStatus
+                )).ToList(),
                 subTotal,
-                0, // TODO: calculate tax
-                subTotal, // TODO: subTotal + tax
+                taxTotal,
+                subTotal + taxTotal,
                 order.Note,
                 status,
                 order.OpenedAt,
@@ -79,6 +92,11 @@ public class OrderService : IOrderService
     {
         var order = await context.Orders
             .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Service)
+            .Include(o => o.Payments)
+            .Include(o => o.OrderTips)
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (order == null)
@@ -86,41 +104,29 @@ public class OrderService : IOrderService
             return null;
         }
 
-        decimal subTotal = 0;
-        var orderItemDtos = new List<OrderItemDto>();
+        var (orderItemDtos, subTotal, taxTotal) = await CalculateTotals(order);
 
-        foreach (var orderItem in order.OrderItems)
-        {
-            var product = await productService.GetByIdAsync(orderItem.ProductId!.Value);
-
-            if (product != null)
-            {
-                var itemTotal = product.Price * orderItem.Quantity;
-                subTotal += itemTotal ?? 0;
-
-                orderItemDtos.Add(new OrderItemDto(
-                    orderItem.Id,
-                    orderItem.OrderId,
-                    orderItem.ProductId ?? 0,
-                    orderItem.Quantity,
-                    itemTotal ?? 0
-                ));
-            }
-        }
-    
         var status = order.CancelledAt is not null ? Status.Cancelled :
             order.ClosedAt is not null ? Status.Closed :
             Status.Open;
-    
+
         return new OrderDto(
             order.Id,
             order.EmployeeId,
             order.CustomerIdentifier,
             orderItemDtos,
-            null,
+            order.Payments?.Select(p => new PaymentDto(
+                p.PaymentId,
+                p.OrderId,
+                p.Method,
+                p.Amount,
+                p.Provider,
+                p.Currency,
+                p.PaymentStatus
+            )).ToList(),
             subTotal,
-            0, // TODO: calculate tax
-            subTotal, // TODO: subTotal + tax
+            taxTotal,
+            subTotal + taxTotal,
             order.Note,
             status,
             order.OpenedAt,
@@ -155,27 +161,8 @@ public class OrderService : IOrderService
         await context.OrderItems.AddRangeAsync(orderItemEntities);
         await context.SaveChangesAsync();
 
-        decimal subTotal = 0;
-        var orderItemDtos = new List<OrderItemDto>();
-
-        foreach (var orderItemEntity in orderItemEntities)
-        {
-            var product = await productService.GetByIdAsync(orderItemEntity.ProductId!.Value);
-
-            if (product != null)
-            {
-                var itemTotal = product.Price * orderItemEntity.Quantity;
-                subTotal += itemTotal ?? 0;
-
-                orderItemDtos.Add(new OrderItemDto(
-                    orderItemEntity.Id,
-                    orderItemEntity.OrderId,
-                    orderItemEntity.ProductId ?? 0,
-                    orderItemEntity.Quantity,
-                    subTotal
-                ));
-            }
-        }
+        order.OrderItems = orderItemEntities;
+        var (orderItemDtos, subTotal, taxTotal) = await CalculateTotals(order);
 
         return new OrderDto(
             order.Id,
@@ -184,8 +171,8 @@ public class OrderService : IOrderService
             orderItemDtos,
             null,
             subTotal,
-            0, // TODO: calculate tax
-            subTotal, // TODO: subTotal + tax
+            taxTotal,
+            subTotal + taxTotal,
             note,
             Status.Open,
             order.OpenedAt,
@@ -290,5 +277,285 @@ public class OrderService : IOrderService
         await context.SaveChangesAsync();
 
         return true;
+    }
+
+    public async Task<(OrderDto? Order, decimal? Change, string? PaymentIntentId, bool? Requires3DS, string? Error)>
+    CloseOrderWithPayments(
+        int orderId,
+        List<PaymentRequest> paymentRequests,
+        TipRequest? tipRequest,
+        decimal? discountAmount = null,
+        decimal? serviceChargeAmount = null)
+    {
+        using var transaction = await context.Database.BeginTransactionAsync();
+
+        try
+        {
+            // 1. Load order with all related data
+            var order = await context.Orders
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Product)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Service)
+                .Include(o => o.Payments)
+                .Include(o => o.OrderTips)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
+            if (order == null)
+                return (null, null, null, null, "Order not found");
+
+            // 2. Validate order state
+            if (order.ClosedAt != null)
+                return (null, null, null, null, "Order is already closed");
+
+            if (order.CancelledAt != null)
+                return (null, null, null, null, "Cannot close a cancelled order");
+
+            // 3. Calculate order totals (with discount and service charge from request)
+            var totals = orderCalculator.CalculateOrderTotals(order, discountAmount, serviceChargeAmount);
+
+            if (totals.Remaining <= 0)
+                return (null, null, null, null, "Order is already fully paid");
+
+            // 4. Validate total payment amount
+            var totalPaymentAmount = paymentRequests.Sum(p => p.Amount);
+            if (totalPaymentAmount < totals.Remaining)
+            {
+                return (null, null, null, null,
+                    $"Insufficient payment. Required: {totals.Remaining:F2}, Provided: {totalPaymentAmount:F2}");
+            }
+
+            // 5. Process each payment
+            decimal? change = null;
+            string? paymentIntentId = null;
+            bool? requires3DS = false;
+            var remainingBalance = totals.Remaining;
+            var giftcardPaymentRecords = new List<GiftcardPayment>();
+
+            foreach (var paymentReq in paymentRequests)
+            {
+                // Validate payment
+                var validation = paymentValidator.ValidatePayment(paymentReq, remainingBalance);
+                if (!validation.IsValid)
+                    return (null, null, null, null, validation.Error);
+
+                var paymentAmount = paymentReq.Amount;
+                var method = paymentReq.Method.ToUpperInvariant();
+
+                // Process based on payment method
+                if (method == "CASH")
+                {
+                    // Calculate change for cash
+                    if (paymentAmount > remainingBalance)
+                    {
+                        change = paymentAmount - remainingBalance;
+                        paymentAmount = remainingBalance;
+                    }
+
+                    // Create cash payment record
+                    var cashPayment = new Payment
+                    {
+                        OrderId = orderId,
+                        Method = "CASH",
+                        Amount = paymentAmount,
+                        Currency = paymentReq.Currency,
+                        Provider = null,
+                        PaymentStatus = "SUCCEEDED"
+                    };
+
+                    context.Payments.Add(cashPayment);
+                    remainingBalance -= paymentAmount;
+                }
+                else if (method == "CARD")
+                {
+                    // Process card payment through Stripe
+                    var stripeResult = await stripeService.ProcessPaymentAsync(
+                        paymentAmount,
+                        paymentReq.Currency,
+                        paymentReq.IdempotencyKey!
+                    );
+
+                    if (!stripeResult.Success)
+                    {
+                        if (stripeResult.Requires3DS)
+                        {
+                            // Return 3DS required response
+                            await transaction.RollbackAsync();
+                            return (null, null, stripeResult.PaymentIntentId, true,
+                                "3D Secure authentication required");
+                        }
+
+                        return (null, null, null, null,
+                            stripeResult.ErrorMessage ?? "Card payment failed");
+                    }
+
+                    // Create card payment record
+                    var cardPayment = new Payment
+                    {
+                        OrderId = orderId,
+                        Method = "CARD",
+                        Amount = paymentAmount,
+                        Currency = paymentReq.Currency,
+                        Provider = "STRIPE",
+                        PaymentStatus = "SUCCEEDED"
+                        // Todo: Add ProviderTransactionId field to Payment model
+                        // cardPayment.ProviderTransactionId = stripeResult.TransactionId;
+                    };
+
+                    context.Payments.Add(cardPayment);
+                    paymentIntentId = stripeResult.PaymentIntentId;
+                    remainingBalance -= paymentAmount;
+                }
+                else if (method == "GIFT_CARD")
+                {
+                    if (string.IsNullOrWhiteSpace(paymentReq.GiftCardCode))
+                    {
+                        await transaction.RollbackAsync();
+                        return (null, null, null, null, "Gift card code is required");
+                    }
+
+                    var giftcard = await context.Giftcards
+                        .FirstOrDefaultAsync(g => g.Code == paymentReq.GiftCardCode && 
+                                                   g.IsActive && 
+                                                   g.DeletedAt == null &&
+                                                   (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow));
+
+                    if (giftcard == null)
+                    {
+                        await transaction.RollbackAsync();
+                        return (null, null, null, null, "Gift card not found or expired");
+                    }
+
+                    if (giftcard.Balance < paymentAmount)
+                    {
+                        await transaction.RollbackAsync();
+                        return (null, null, null, null, 
+                            $"Insufficient gift card balance. Available: {giftcard.Balance:F2}, Required: {paymentAmount:F2}");
+                    }
+
+                    giftcard.Balance -= paymentAmount;
+                    giftcard.UpdatedAt = DateTime.UtcNow;
+
+                    var giftCardPayment = new Payment
+                    {
+                        OrderId = orderId,
+                        Method = "GIFT_CARD",
+                        Amount = paymentAmount,
+                        Currency = paymentReq.Currency,
+                        Provider = null,
+                        PaymentStatus = "SUCCEEDED"
+                    };
+
+                    context.Payments.Add(giftCardPayment);
+                    await context.SaveChangesAsync();
+
+                    var giftcardPaymentRecord = new GiftcardPayment
+                    {
+                        PaymentId = giftCardPayment.PaymentId,
+                        GiftcardId = giftcard.GiftcardId,
+                        AmountUsed = paymentAmount
+                    };
+                    giftcardPaymentRecords.Add(giftcardPaymentRecord);
+
+                    remainingBalance -= paymentAmount;
+                }
+            }
+
+            context.GiftcardPayments.AddRange(giftcardPaymentRecords);
+
+            // 6. Record tip if provided
+            if (tipRequest != null && tipRequest.Amount > 0)
+            {
+                var orderTip = new OrderTip
+                {
+                    OrderId = orderId,
+                    Source = tipRequest.Source,
+                    Amount = tipRequest.Amount,
+                    CreatedAt = DateTime.UtcNow
+                };
+                context.OrderTips.Add(orderTip);
+            }
+
+            // 7. Close the order
+            order.ClosedAt = DateTime.UtcNow;
+
+            // 8. Save all changes
+            await context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            // 9. Return result
+            var orderDto = await GetOrder(orderId);
+            return (orderDto, change, paymentIntentId, requires3DS, null);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return (null, null, null, null, $"Payment processing failed: {ex.Message}");
+        }
+    }
+
+    private async Task<(List<OrderItemDto> Items, decimal SubTotal, decimal Tax)> CalculateTotals(Order order)
+    {
+        decimal subTotal = 0;
+        decimal taxTotal = 0;
+        var orderItemDtos = new List<OrderItemDto>();
+
+        foreach (var orderItem in order.OrderItems)
+        {
+            if (orderItem.ProductId != null && orderItem.Product != null)
+            {
+                var product = orderItem.Product;
+                var itemTotal = product.Price * orderItem.Quantity;
+                subTotal += itemTotal ?? 0;
+
+                decimal taxRate = 0;
+                if (product.TaxCategoryId.HasValue)
+                {
+                    var at = order.OpenedAt;
+                    taxRate = await _taxService.GetRatePercentAtAsync(product.TaxCategoryId.Value, at);
+                }
+
+                var itemTax = Math.Round((itemTotal ?? 0) * (taxRate / 100m), 2);
+                taxTotal += itemTax;
+
+                orderItemDtos.Add(new OrderItemDto(
+                    orderItem.Id,
+                    orderItem.OrderId,
+                    orderItem.ProductId ?? 0,
+                    orderItem.Quantity,
+                    itemTotal ?? 0,
+                    product.Name,
+                    null
+                ));
+            }
+            else if (orderItem.ServiceId != null && orderItem.Service != null)
+            {
+                var service = orderItem.Service;
+                var itemTotal = service.DefaultPrice * orderItem.Quantity;
+                subTotal += itemTotal ?? 0;
+
+                decimal taxRate = 0;
+                if (service.TaxCategoryId.HasValue)
+                {
+                    var at = order.OpenedAt;
+                    taxRate = await _taxService.GetRatePercentAtAsync(service.TaxCategoryId.Value, at);
+                }
+
+                var itemTax = Math.Round((itemTotal ?? 0) * (taxRate / 100m), 2);
+                taxTotal += itemTax;
+
+                orderItemDtos.Add(new OrderItemDto(
+                    orderItem.Id,
+                    orderItem.OrderId,
+                    0,
+                    orderItem.Quantity,
+                    itemTotal ?? 0,
+                    null,
+                    service.Name
+                ));
+            }
+        }
+
+        return (orderItemDtos, subTotal, taxTotal);
     }
 }

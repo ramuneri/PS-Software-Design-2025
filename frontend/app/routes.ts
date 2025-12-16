@@ -32,6 +32,14 @@ export default [
     route("reservations/:id/edit", "routes/reservations/edit.tsx"),
     route("reservations/calendar", "routes/reservations/calendar.tsx"),
 
+    route("taxes", "routes/taxes/index.tsx"),
+    route("taxes/create", "routes/taxes/create.tsx"),
+
+    route("giftcards", "routes/giftcards/index.tsx"),
+    route("giftcards/create", "routes/giftcards/create.tsx"),
+    route("giftcards/view/:id", "routes/giftcards/view.tsx"),
+    route("giftcards/edit/:id", "routes/giftcards/edit.tsx"),
+
     route("users", "routes/users/index.tsx"),
     route("users/create", "routes/users/create.tsx"),
     route("users/:id/edit", "routes/users/edit.tsx"),

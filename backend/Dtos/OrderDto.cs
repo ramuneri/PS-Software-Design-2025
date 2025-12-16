@@ -14,7 +14,7 @@ public record OrderDto(
     decimal TotalAmount,
     string? Note,
     Status Status,
-    DateTime OpenedAt,
+    DateTime CreatedAt,
     DateTime? ClosedAt,
     DateTime? CancelledAt
 );
