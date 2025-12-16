@@ -11,12 +11,19 @@ namespace backend.Services.Implementations;
 public class ReservationService : IReservationService
 {
     private readonly ApplicationDbContext _db;
+    private readonly INotificationSmsService _smsService;
+
     private const int TEST_MERCHANT_ID = 1;
 
-    public ReservationService(ApplicationDbContext db)
+    public ReservationService(
+        ApplicationDbContext db,
+        INotificationSmsService smsService
+    )
     {
         _db = db;
+        _smsService = smsService;
     }
+
 
     public async Task<IEnumerable<ReservationDto>> GetAllAsync(bool includeInactive = false)
     {
@@ -83,7 +90,18 @@ public class ReservationService : IReservationService
         _db.Reservations.Add(reservation);
         await _db.SaveChangesAsync();
 
+        if (reservation.Customer != null && reservation.Service != null)
+        {
+            await _smsService.SendAppointmentCreatedAsync(
+                reservation.Customer.PhoneNumber!,
+                reservation.StartTime!.Value,
+                reservation.Service.Name ?? "Service"
+            );
+        }
+
+
         return reservation.ToDto();
+
     }
 
     public async Task<ReservationDto?> UpdateAsync(int id, UpdateReservationDto dto)
