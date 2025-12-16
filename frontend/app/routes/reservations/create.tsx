@@ -17,22 +17,12 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-const WORK_START_HOUR = 7;
-const WORK_END_HOUR = 20;
-
 function toDateTimeLocalValue(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
     date.getDate()
   )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
-
-function clampHour(base: string, hour: number) {
-  const d = base ? new Date(base) : new Date();
-  d.setHours(hour, 0, 0, 0);
-  return toDateTimeLocalValue(d);
-}
-
 
 function normalizeArray<T>(value: any): T[] {
   if (Array.isArray(value)) return value;
@@ -52,8 +42,9 @@ export default function CreateReservationPage() {
   const [customerId, setCustomerId] = useState("");
   const [startTime, setStartTime] = useState("");
 
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -74,13 +65,9 @@ export default function CreateReservationPage() {
           throw new Error();
         }
 
-        const servicesJson = await servicesRes.json();
-        const employeesJson = await employeesRes.json();
-        const customersJson = await customersRes.json();
-
-        setServices(normalizeArray<Service>(servicesJson));
-        setEmployees(normalizeArray<User>(employeesJson));
-        setCustomers(normalizeArray<User>(customersJson));
+        setServices(normalizeArray(await servicesRes.json()));
+        setEmployees(normalizeArray(await employeesRes.json()));
+        setCustomers(normalizeArray(await customersRes.json()));
       } catch {
         setError("Failed to load data");
       }
@@ -89,61 +76,72 @@ export default function CreateReservationPage() {
     loadData();
   }, []);
 
-
-const handleCreate = async () => {
-  if (!serviceId || !employeeId || !customerId || !startTime) {
-    setError("All fields are required");
-    return;
-  }
-
-  try {
-    setLoading(true);
-    setError(null);
-
-    const res = await fetch(
-      `${import.meta.env.VITE_API_URL}/api/reservations`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders(),
-        },
-        body: JSON.stringify({
-          serviceId,
-          employeeId,
-          customerId,
-          startTime: new Date(startTime).toISOString(),
-        }),
-      }
-    );
-
-    if (!res.ok) {
-      const text = await res.text();
-
-      if (text.includes("already has a reservation")) {
-        setError("This employee is already booked at that time.");
-      } else if (text.includes("07:00")) {
-        setError("Reservations are allowed only between 07:00 and 20:00.");
-      } else {
-        setError("Failed to create reservation.");
-      }
+  const handleCreate = async () => {
+    if (!serviceId || !employeeId || !customerId || !startTime) {
+      setError("All fields are required");
       return;
     }
 
-    navigate("/reservations");
-  } catch {
-    setError("Failed to create reservation.");
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setLoading(true);
+      setError(null);
 
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/reservations`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(),
+          },
+          body: JSON.stringify({
+            serviceId,
+            employeeId,
+            customerId,
+            startTime: new Date(startTime).toISOString(),
+          }),
+        }
+      );
 
+      if (!res.ok) {
+        const text = await res.text();
+
+        if (text.includes("already has a reservation")) {
+          setError("This employee is already booked at that time.");
+        } else if (text.includes("07:00")) {
+          setError("Reservations are allowed only between 07:00 and 20:00.");
+        } else {
+          setError("Failed to create reservation.");
+        }
+        return;
+      }
+
+      // ✅ SUCCESS POPUP
+      setSuccessMessage(
+        "Reservation created successfully. SMS notification sent."
+      );
+
+      // ✅ DELAYED NAVIGATION
+      setTimeout(() => {
+        navigate("/reservations");
+      }, 1500);
+    } catch {
+      setError("Failed to create reservation.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen text-black bg-gray-200 p-6 flex justify-center">
-      <div className="w-full max-w-2xl space-y-6">
+      {/* ✅ SUCCESS TOAST */}
+      {successMessage && (
+        <div className="fixed top-6 right-6 bg-green-500 text-white px-6 py-3 rounded-md shadow-lg z-50">
+          {successMessage}
+        </div>
+      )}
 
+      <div className="w-full max-w-2xl space-y-6">
         <div className="bg-gray-300 py-3 text-center font-medium">
           Create Reservation
         </div>
@@ -155,7 +153,6 @@ const handleCreate = async () => {
         )}
 
         <div className="bg-gray-300 p-6 space-y-4">
-
           <select
             value={serviceId}
             onChange={(e) => setServiceId(Number(e.target.value))}
@@ -195,15 +192,13 @@ const handleCreate = async () => {
             ))}
           </select>
 
-
           <input
             type="datetime-local"
             value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
             min={toDateTimeLocalValue(new Date())}
+            onChange={(e) => setStartTime(e.target.value)}
             className="w-full bg-gray-400 p-2 rounded"
           />
-
         </div>
 
         <div className="flex gap-4">

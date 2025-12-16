@@ -23,6 +23,5 @@ public class Service
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
 
-    // Correct many-to-many (must match ServiceChargePolicy.cs + DbContext)
     public ICollection<ServiceServiceChargePolicy> ServiceLinks { get; set; } = new List<ServiceServiceChargePolicy>();
 }
