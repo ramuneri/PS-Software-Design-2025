@@ -33,6 +33,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
             });
         } else {
             localStorage.removeItem("access-token");
+            localStorage.removeItem("user");
             window.location.href = "/login";
             return res;
         }

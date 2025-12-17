@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import {useNavigate} from "react-router";
+import { apiFetch } from "../../api";
 
 type OrderItem = {
     productId: number;
@@ -50,7 +51,8 @@ export default function CreateOrderPage() {
     const [showInventory, setShowInventory] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [productsError, setProductsError] = useState<string | null>(null);
+    const [submitError, setSubmitError] = useState<string | null>(null);
     
     const [showVariationModal, setShowVariationModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -61,22 +63,17 @@ export default function CreateOrderPage() {
     const loadProducts = async () => {
         try {
             setLoading(true);
-            setError(null);
+            setProductsError(null);
 
-            const token = localStorage.getItem("access-token");
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products`, {
-                headers: {
-                    "Content-Type": "application/json",
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-            });
+            const res = await apiFetch(`${import.meta.env.VITE_API_URL}/api/products`);
+            if (res.status === 401) return;
 
             if (!res.ok) throw new Error(`Failed to load products (${res.status})`);
 
             const data = await res.json();
             setProducts(data.data);
         } catch (err: any) {
-            setError(err.message ?? "Unknown error");
+            setProductsError(err.message ?? "Unknown error");
         } finally {
             setLoading(false);
         }
@@ -85,14 +82,10 @@ export default function CreateOrderPage() {
     const loadVariations = async (productId: number) => {
         try {
             setLoadingVariations(true);
-            const token = localStorage.getItem("access-token");
-
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/products/${productId}/variations`, {
-                headers: {
-                    "Content-Type": "application/json",
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-            });
+            const res = await apiFetch(
+                `${import.meta.env.VITE_API_URL}/api/products/${productId}/variations`
+            );
+            if (res.status === 401) return;
 
             if (!res.ok) throw new Error(`Failed to load variations (${res.status})`);
 
@@ -110,14 +103,12 @@ export default function CreateOrderPage() {
     const handleCreate = async () => {
         try {
             setLoading(true);
-            setError(null);
+            setSubmitError(null);
 
             if (items.length === 0) {
-                setError("At least one item is required");
+                setSubmitError("At least one item is required");
                 return;
             }
-
-            const token = localStorage.getItem("access-token");
 
             const orderData = {
                 customerIdentifier: customer,
@@ -132,14 +123,11 @@ export default function CreateOrderPage() {
 
             console.log("Sending order data:", orderData);
 
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/orders`, {
+            const res = await apiFetch(`${import.meta.env.VITE_API_URL}/orders`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
                 body: JSON.stringify(orderData)
             });
+            if (res.status === 401) return;
 
             if (!res.ok) {
                 const errorText = await res.text();
@@ -152,13 +140,14 @@ export default function CreateOrderPage() {
 
             navigate("/orders/view");
         } catch (err: any) {
-            setError(err.message ?? "Failed to create order");
+            setSubmitError(err.message ?? "Failed to create order");
         } finally {
             setLoading(false);
         }
     };
 
     const handleAddItem = async () => {
+        setSubmitError(null);
         setShowInventory(true);
         await loadProducts();
     };
@@ -345,9 +334,9 @@ export default function CreateOrderPage() {
                     </div>
 
                     {/* Error Display */}
-                    {error && (
+                    {submitError && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                            {error}
+                            {submitError}
                         </div>
                     )}
 
@@ -409,13 +398,13 @@ export default function CreateOrderPage() {
                                         </div>
                                     )}
 
-                                    {error && (
+                                    {productsError && (
                                         <div className="text-red-600 text-center py-8">
-                                            Failed to load products: {error}
+                                            Failed to load products: {productsError}
                                         </div>
                                     )}
 
-                                    {!loading && !error && products.length > 0 && products.map((product) => (
+                                    {!loading && !productsError && products.length > 0 && products.map((product) => (
                                         <div
                                             key={product.id}
                                             className="grid grid-cols-12 gap-2 bg-gray-200 px-2 py-2 rounded-md items-center text-sm"

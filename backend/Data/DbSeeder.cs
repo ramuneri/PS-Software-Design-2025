@@ -28,7 +28,15 @@ namespace backend.Data
         {
             _logger.LogInformation("Starting database seeding...");
 
-            await _db.Database.MigrateAsync();
+            try
+            {
+                await _db.Database.MigrateAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Database migrations failed; attempting compatibility fixes anyway");
+            }
+
             await EnsureCompatibilityColumnsAsync();
 
             var merchant = await SeedMerchantAsync();
@@ -72,6 +80,38 @@ namespace backend.Data
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to ensure Reservations.Note column");
+            }
+
+            // Refunds schema drift: older DBs may still have PaymentId and not have IsPartial.
+            try
+            {
+                await _db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"identity\".\"Refunds\" ADD COLUMN IF NOT EXISTS \"IsPartial\" boolean NOT NULL DEFAULT false;"
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to ensure Refunds.IsPartial column");
+            }
+
+            try
+            {
+                await _db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"identity\".\"Refunds\" ADD COLUMN IF NOT EXISTS \"OrderId\" integer;"
+                );
+                await _db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"identity\".\"Refunds\" DROP CONSTRAINT IF EXISTS \"FK_Refunds_Payments_PaymentId\";"
+                );
+                await _db.Database.ExecuteSqlRawAsync(
+                    "DROP INDEX IF EXISTS \"identity\".\"IX_Refunds_PaymentId\";"
+                );
+                await _db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"identity\".\"Refunds\" DROP COLUMN IF EXISTS \"PaymentId\";"
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to remove legacy Refunds.PaymentId column");
             }
         }
 
