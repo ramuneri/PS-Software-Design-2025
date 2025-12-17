@@ -58,10 +58,11 @@ export default [
     route("customers/:id", "routes/customers/$id.tsx"),
     route("customers/:id/edit", "routes/customers/edit.tsx"),
 
+    route("statistics", "routes/statistics.tsx"),
 
 
 
-    
+
     
     route("example", "routes/example.tsx"),
     route("debug", "routes/debug.tsx"),
