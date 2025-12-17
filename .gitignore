@@ -14,6 +14,7 @@
 # Environment files
 .env
 /frontend/.env
+frontend/.env.example
 
 # Vite / React / TypeScript
 /frontend/dist/

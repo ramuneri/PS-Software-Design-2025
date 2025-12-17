@@ -154,6 +154,7 @@ export default function EditUserPage() {
             onChange={(e) => setUser({ ...user, role: e.target.value })}
             className="w-full bg-gray-200 rounded-md px-4 py-2"
           >
+            <option value="Owner">Owner</option>
             <option value="Employee">Employee</option>
             <option value="Customer">Customer</option>
           </select>

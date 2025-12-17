@@ -6,6 +6,7 @@ using System.Text;
 using backend.Data;
 using backend.Data.Models;
 using backend.Dtos;
+using backend.Enums;
 using backend.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,10 @@ public class AuthService : IAuthService
     {
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null || !await _userManager.CheckPasswordAsync(user, password))
+            return null;
+
+        // Prevent deactivated users from logging in
+        if (!user.IsActive)
             return null;
 
         user.LastLoginAt = DateTime.UtcNow;
@@ -66,7 +71,7 @@ public class AuthService : IAuthService
                 Name: user.Name ?? "",
                 Surname: user.Surname ?? "",
                 PhoneNumber: user.PhoneNumber ?? "",
-                Role: user.Role ?? "Employee",
+                Role: user.Role ?? UserRoles.Employee,
                 IsSuperAdmin: user.IsSuperAdmin,
                 IsActive: user.IsActive,
                 LastLoginAt: user.LastLoginAt,
@@ -87,6 +92,15 @@ public class AuthService : IAuthService
         var user = await _userManager.FindByIdAsync(tokenEntity.UserId);
         if (user == null)
             return null;
+
+        // Prevent deactivated users from refreshing tokens
+        if (!user.IsActive)
+        {
+            // Revoke the refresh token since user is deactivated
+            tokenEntity.IsRevoked = true;
+            await _context.SaveChangesAsync();
+            return null;
+        }
 
         tokenEntity.IsRevoked = true;
 
@@ -142,6 +156,10 @@ public class AuthService : IAuthService
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email!),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Role, user.Role ?? UserRoles.Employee),
+            new Claim("role", user.Role ?? UserRoles.Employee),
+            new Claim("merchantId", user.MerchantId?.ToString() ?? ""),
+            new Claim("isSuperAdmin", user.IsSuperAdmin.ToString().ToLower())
         };
 
         var token = new JwtSecurityToken(

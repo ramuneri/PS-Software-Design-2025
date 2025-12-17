@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using backend.Data.Models;
+using backend.Enums;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -32,6 +33,8 @@ namespace backend.Data
 
             var merchant = await SeedMerchantAsync();
 
+            var superAdmin = await SeedSuperAdminUserAsync(merchant);
+            var owner = await SeedOwnerUserAsync(merchant);
             var employee = await SeedEmployeeUserAsync(merchant);
             var customer = await SeedCustomerUserAsync(merchant);
 
@@ -98,7 +101,7 @@ namespace backend.Data
         }
 
 
-        private async Task<User> SeedEmployeeUserAsync(Merchant merchant)
+        private async Task<User> SeedSuperAdminUserAsync(Merchant merchant)
         {
             const string email = "test@temp.com";
             const string password = "test123";
@@ -112,7 +115,134 @@ namespace backend.Data
                     UserName = email,
                     Email = email,
                     MerchantId = merchant.MerchantId,
-                    Role = "Employee",
+                    Role = UserRoles.Owner,
+                    IsSuperAdmin = true,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    LastLoginAt = DateTime.UtcNow
+                };
+
+                var result = await _userManager.CreateAsync(user, password);
+
+                if (!result.Succeeded)
+                {
+                    var errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
+                    _logger.LogError("Failed to seed super admin user: {Error}", errorMsg);
+                }
+                else
+                {
+                    _logger.LogInformation("Seeded SuperAdmin user {Email}", email);
+                }
+            }
+            else
+            {
+                var needsUpdate = false;
+                // Update existing user to ensure SuperAdmin status
+                if (!user.IsSuperAdmin || user.Role != UserRoles.Owner)
+                {
+                    user.IsSuperAdmin = true;
+                    user.Role = UserRoles.Owner;
+                    needsUpdate = true;
+                }
+                if (user.MerchantId != merchant.MerchantId)
+                {
+                    user.MerchantId = merchant.MerchantId;
+                    needsUpdate = true;
+                }
+                if (!user.IsActive)
+                {
+                    user.IsActive = true;
+                    needsUpdate = true;
+                }
+                if (needsUpdate)
+                {
+                    await _db.SaveChangesAsync();
+                    _logger.LogInformation("Updated user to SuperAdmin: {Email}", email);
+                }
+            }
+
+            return user;
+        }
+
+        private async Task<User> SeedOwnerUserAsync(Merchant merchant)
+        {
+            const string email = "owner@temp.com";
+            const string password = "test123";
+
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    UserName = email,
+                    Email = email,
+                    MerchantId = merchant.MerchantId,
+                    Role = UserRoles.Owner,
+                    IsSuperAdmin = false,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    LastLoginAt = DateTime.UtcNow
+                };
+
+                var result = await _userManager.CreateAsync(user, password);
+
+                if (!result.Succeeded)
+                {
+                    var errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
+                    _logger.LogError("Failed to seed owner user: {Error}", errorMsg);
+                }
+                else
+                {
+                    _logger.LogInformation("Seeded Owner user {Email}", email);
+                }
+            }
+            else
+            {
+                var needsUpdate = false;
+                // Update existing user to ensure Owner status
+                if (user.IsSuperAdmin || user.Role != UserRoles.Owner)
+                {
+                    user.IsSuperAdmin = false;
+                    user.Role = UserRoles.Owner;
+                    needsUpdate = true;
+                }
+                if (user.MerchantId != merchant.MerchantId)
+                {
+                    user.MerchantId = merchant.MerchantId;
+                    needsUpdate = true;
+                }
+                if (!user.IsActive)
+                {
+                    user.IsActive = true;
+                    needsUpdate = true;
+                }
+                if (needsUpdate)
+                {
+                    await _db.SaveChangesAsync();
+                    _logger.LogInformation("Updated user to Owner: {Email}", email);
+                }
+            }
+
+            return user;
+        }
+
+        private async Task<User> SeedEmployeeUserAsync(Merchant merchant)
+        {
+            const string email = "employee@temp.com";
+            const string password = "test123";
+
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    UserName = email,
+                    Email = email,
+                    MerchantId = merchant.MerchantId,
+                    Role = UserRoles.Employee,
+                    IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     LastLoginAt = DateTime.UtcNow
                 };
@@ -131,11 +261,21 @@ namespace backend.Data
             }
             else
             {
+                var needsUpdate = false;
                 if (user.MerchantId != merchant.MerchantId)
                 {
                     user.MerchantId = merchant.MerchantId;
+                    needsUpdate = true;
+                }
+                if (!user.IsActive)
+                {
+                    user.IsActive = true;
+                    needsUpdate = true;
+                }
+                if (needsUpdate)
+                {
                     await _db.SaveChangesAsync();
-                    _logger.LogInformation("Updated test user to correct MerchantId");
+                    _logger.LogInformation("Updated employee user to correct MerchantId and/or IsActive status");
                 }
             }
 
@@ -144,7 +284,7 @@ namespace backend.Data
 
         private async Task<User> SeedCustomerUserAsync(Merchant merchant)
         {
-            const string email = "customer@test.com";
+            const string email = "customer@temp.com";
             const string password = "test123";
 
             var user = await _userManager.FindByEmailAsync(email);
@@ -156,7 +296,8 @@ namespace backend.Data
                     UserName = email,
                     Email = email,
                     MerchantId = merchant.MerchantId,
-                    Role = "Customer",
+                    Role = UserRoles.Customer,
+                    IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     LastLoginAt = DateTime.UtcNow
                 };
@@ -171,6 +312,25 @@ namespace backend.Data
                 else
                 {
                     _logger.LogInformation("Seeded Customer user {Email}", email);
+                }
+            }
+            else
+            {
+                var needsUpdate = false;
+                if (user.MerchantId != merchant.MerchantId)
+                {
+                    user.MerchantId = merchant.MerchantId;
+                    needsUpdate = true;
+                }
+                if (!user.IsActive)
+                {
+                    user.IsActive = true;
+                    needsUpdate = true;
+                }
+                if (needsUpdate)
+                {
+                    await _db.SaveChangesAsync();
+                    _logger.LogInformation("Updated customer user to correct MerchantId and/or IsActive status");
                 }
             }
 

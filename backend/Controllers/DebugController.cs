@@ -1,4 +1,5 @@
 using backend.Data;
+using backend.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -85,7 +86,7 @@ public class DebugController : ControllerBase
     {
         var customer = await _db.Users
             .Where(u =>
-                u.Role == "Customer" &&
+                u.Role == UserRoles.Customer &&
                 u.MerchantId == TestMerchantId)
             .Select(u => new
             {
