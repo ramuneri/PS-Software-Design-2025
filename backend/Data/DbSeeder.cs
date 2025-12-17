@@ -131,11 +131,21 @@ namespace backend.Data
             }
             else
             {
+                var updated = false;
                 if (user.MerchantId != merchant.MerchantId)
                 {
                     user.MerchantId = merchant.MerchantId;
+                    updated = true;
+                }
+                if (user.Role != "Employee")
+                {
+                    user.Role = "Employee";
+                    updated = true;
+                }
+                if (updated)
+                {
                     await _db.SaveChangesAsync();
-                    _logger.LogInformation("Updated test user to correct MerchantId");
+                    _logger.LogInformation("Updated test user with correct MerchantId and/or Role");
                 }
             }
 

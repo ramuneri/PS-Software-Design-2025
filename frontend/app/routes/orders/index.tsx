@@ -11,6 +11,7 @@ type Order = {
     cancelledAt: string | null;
     totalAmount: number;
     status?: number;
+    refundStatus?: "none" | "partial" | "full";
 };
 
 export default function OrdersListPage() {
@@ -29,10 +30,15 @@ export default function OrdersListPage() {
                             : "Unknown";
         }
 
-        //fallback
         if (o.cancelledAt) return "Cancelled";
         if (o.closedAt) return "Closed";
         return "Open";
+    };
+
+    const refundStatusLabel = (o: Order) => {
+        if (o.refundStatus === "full") return "Fully Refunded";
+        if (o.refundStatus === "partial") return "Partially Refunded";
+        return null;
     };
 
     const isOpen = (o: Order) => statusLabel(o) === "Open";
@@ -60,7 +66,39 @@ export default function OrdersListPage() {
             if (!res.ok) throw new Error(`Failed to load orders (${res.status})`);
 
             const data = await res.json();
-            setOrders(data);
+            
+            const ordersWithRefunds = await Promise.all(
+                data.map(async (order: Order) => {
+                    if (order.closedAt) {
+                        try {
+                            const refundRes = await fetch(
+                                `${import.meta.env.VITE_API_URL}/refunds/order/${order.id}`,
+                                {
+                                    headers: {
+                                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                                    },
+                                }
+                            );
+                            if (refundRes.ok) {
+                                const refunds = await refundRes.json();
+                                if (refunds && refunds.length > 0) {
+                                    const totalRefunded = refunds.reduce((sum: number, r: any) => sum + r.amount, 0);
+                                    if (totalRefunded >= order.totalAmount) {
+                                        order.refundStatus = "full";
+                                    } else if (totalRefunded > 0) {
+                                        order.refundStatus = "partial";
+                                    }
+                                }
+                            }
+                        } catch {
+                            // Silently fail if refunds can't be fetched
+                        }
+                    }
+                    return order;
+                })
+            );
+            
+            setOrders(ordersWithRefunds);
         } catch (err: any) {
             setError(err.message ?? "Unknown error");
         } finally {
@@ -156,9 +194,14 @@ export default function OrdersListPage() {
                                         <span className="col-span-3 text-black">
                                             {formatDateTime(order.openedAt ?? order.createdAt ?? null)}
                                         </span>
-                                        <span className="col-span-2 text-black text-center">
-                                            {statusLabel(order)}
-                                        </span>
+                                        <div className="col-span-2 text-black text-center">
+                                            <div>{statusLabel(order)}</div>
+                                            {refundStatusLabel(order) && (
+                                                <div className="text-xs text-gray-700">
+                                                    {refundStatusLabel(order)}
+                                                </div>
+                                            )}
+                                        </div>
                                         <span className="col-span-2 text-black text-right">
                                             ${order.totalAmount.toFixed(2)}
                                         </span>
