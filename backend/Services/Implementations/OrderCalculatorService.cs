@@ -31,12 +31,9 @@ public class OrderCalculatorService : IOrderCalculatorService
 
             if (item.ProductId != null && item.Product != null)
             {
-                var price = item.Product.Price ?? 0;
-                
-                if (item.ProductVariationId != null && item.ProductVariation != null)
-                {
-                    price += item.ProductVariation.PriceAdjustment;
-                }
+                var price = item.ProductVariationId != null && item.ProductVariation != null
+                    ? item.ProductVariation.PriceAdjustment   // treat variation price as absolute
+                    : item.Product.Price ?? 0;
                 
                 itemTotal = price * item.Quantity;
                 taxCategoryId = item.Product.TaxCategoryId;

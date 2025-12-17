@@ -5,7 +5,7 @@ import { apiFetch } from "../../api";
 interface Variation {
   id?: number;
   name: string;
-  priceAdjustment: number;
+  priceAdjustment: number; // stored as full variation price
   isActive: boolean;
 }
 
@@ -311,7 +311,7 @@ export default function ProductEdit() {
                     </div>
 
                     <div>
-                      <label className="block mb-1 text-xs">Price Adjustment</label>
+                      <label className="block mb-1 text-xs">Variation Price</label>
                       <input
                           type="number"
                           step="0.01"
@@ -366,7 +366,7 @@ export default function ProductEdit() {
                             </div>
 
                             <div className="flex-1">
-                              <label className="block mb-1 text-xs">Price Adjustment</label>
+                              <label className="block mb-1 text-xs">Variation Price</label>
                               <input
                                   type="number"
                                   step="0.01"

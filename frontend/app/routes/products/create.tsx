@@ -253,7 +253,7 @@ export default function ProductCreate() {
                     </div>
 
                     <div>
-                      <label className="block mb-1 text-xs">Price Adjustment</label>
+                      <label className="block mb-1 text-xs">Variation Price</label>
                       <input
                           type="number"
                           step="0.01"
@@ -308,7 +308,7 @@ export default function ProductCreate() {
                             </div>
 
                             <div className="flex-1">
-                              <label className="block mb-1 text-xs">Price Adjustment</label>
+                              <label className="block mb-1 text-xs">Variation Price</label>
                               <input
                                   type="number"
                                   step="0.01"

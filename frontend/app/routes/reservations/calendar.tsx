@@ -14,9 +14,6 @@ function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-const WORK_START_HOUR = 7;
-const WORK_END_HOUR = 20;
-
 function getStartOfWeek(date: Date) {
   const d = new Date(date);
   const day = d.getDay();
@@ -33,12 +30,16 @@ export default function ReservationsCalendar() {
   const [weekStart, setWeekStart] = useState(() => getStartOfWeek(new Date()));
   const [loading, setLoading] = useState(true);
 
+  const weekEnd = useMemo(() => {
+    const end = new Date(weekStart);
+    end.setDate(weekStart.getDate() + 7);
+    end.setHours(0, 0, 0, 0);
+    return end;
+  }, [weekStart]);
+
+  // Show full 24h window so off-hours reservations are visible.
   const hours = useMemo(
-    () =>
-      Array.from(
-        { length: WORK_END_HOUR - WORK_START_HOUR },
-        (_, i) => WORK_START_HOUR + i
-      ),
+    () => Array.from({ length: 24 }, (_, i) => i),
     []
   );
 
@@ -60,7 +61,8 @@ export default function ReservationsCalendar() {
         { headers: authHeaders() }
       );
       const data = await res.json();
-      setReservations(data);
+      const list = Array.isArray(data) ? data : Array.isArray(data.data) ? data.data : [];
+      setReservations(list);
       setLoading(false);
     }
 
@@ -116,10 +118,13 @@ export default function ReservationsCalendar() {
               {days.map((day) => {
                 const matches = reservations.filter((r) => {
                   const start = new Date(r.startTime);
-                  return (
-                    start.getHours() === hour &&
-                    start.toDateString() === day.toDateString()
-                  );
+                  if (Number.isNaN(start.getTime())) return false;
+                  const sameDay =
+                    start.getFullYear() === day.getFullYear() &&
+                    start.getMonth() === day.getMonth() &&
+                    start.getDate() === day.getDate();
+                  if (!sameDay) return false;
+                  return start.getHours() === hour;
                 });
 
                 return (

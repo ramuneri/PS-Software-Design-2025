@@ -5,7 +5,8 @@ namespace backend.Dtos;
 public record SplitPaymentRequest(
     IEnumerable<int> OrderItemIds,
     string Method,
-    string Currency
+    string Currency,
+    string? Provider = null
 );
 
 public record SplitCloseOrderRequest(

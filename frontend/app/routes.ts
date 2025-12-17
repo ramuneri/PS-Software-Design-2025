@@ -28,6 +28,11 @@ export default [
     route("service-charge-policies/create", "routes/serviceChargePolicies/create.tsx"),
     route("service-charge-policies/:id/edit", "routes/serviceChargePolicies/edit.tsx"),
 
+    route("payments", "routes/payments/index.tsx"),
+    route("payments/create", "routes/payments/create.tsx"),
+    route("payments/:id", "routes/payments/details.tsx"),
+    route("payments/:id/edit", "routes/payments/edit.tsx"),
+
     route("reservations", "routes/reservations/index.tsx"),
     route("reservations/create", "routes/reservations/create.tsx"),
     route("reservations/:id/edit", "routes/reservations/edit.tsx"),
@@ -49,6 +54,9 @@ export default [
     route("audit-logs", "routes/audit-logs/index.tsx"),
 
     route("accept-invite", "routes/accept-invite.tsx"),
+    route("customers", "routes/customers/index.tsx"),
+    route("customers/:id", "routes/customers/$id.tsx"),
+    route("customers/:id/edit", "routes/customers/edit.tsx"),
 
 
 

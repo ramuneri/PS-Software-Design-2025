@@ -80,3 +80,6 @@ https://docs.google.com/document/d/1y9MGumKtNmUBonl7jRDzTfgCaIwaRQizRJxI4M2puZw/
 
 https://www.overleaf.com/project/68d6792d73e469230f8e2909
 .
+
+### Here is a link to a Google Drive file that documents main changes we made during the development of this project, including the main updates reflected in the documentation.
+https://docs.google.com/document/d/1dC7oYD014BluLbxDHf-FF2NaTevsqTgHll7BtvEuFE0/edit?usp=sharing

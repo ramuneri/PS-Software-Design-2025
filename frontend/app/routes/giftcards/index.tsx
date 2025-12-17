@@ -31,11 +31,8 @@ export default function GiftcardsPage() {
       const merchantId = 1;
       const params = new URLSearchParams({
         includeInactive: String(includeInactive),
+        limit: "200",
       });
-
-      if (searchCode) {
-        params.append("code", searchCode);
-      }
 
       const res = await fetch(
         `${import.meta.env.VITE_API_URL}/api/giftcards?${params}`,
@@ -53,7 +50,12 @@ export default function GiftcardsPage() {
       }
 
       const data = await res.json();
-      setGiftcards(Array.isArray(data.data) ? data.data : []);
+      const all = Array.isArray(data.data) ? data.data : [];
+      const trimmed = searchCode.trim().toLowerCase();
+      const filtered = trimmed
+        ? all.filter((g: any) => (g.code ?? "").toLowerCase().includes(trimmed))
+        : all;
+      setGiftcards(filtered);
     } catch (err: any) {
       setError(err.message || "Failed to load giftcards");
       setGiftcards([]);
@@ -64,7 +66,7 @@ export default function GiftcardsPage() {
 
   useEffect(() => {
     loadGiftcards();
-  }, [includeInactive]);
+  }, [includeInactive, searchCode]);
 
   const deleteGiftcard = async (id: number) => {
     if (!confirm("Are you sure you want to delete this giftcard?")) return;
@@ -110,11 +112,6 @@ export default function GiftcardsPage() {
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    loadGiftcards();
-  };
-
   if (loading) {
     return <div className="p-6 text-black">Loading giftcards…</div>;
   }
@@ -137,7 +134,7 @@ export default function GiftcardsPage() {
 
         {/* SEARCH SECTION */}
         <form
-          onSubmit={handleSearch}
+          onSubmit={(e) => e.preventDefault()}
           className="bg-gray-300 rounded-md p-4 space-y-3"
         >
           <div className="flex gap-3">
@@ -148,12 +145,6 @@ export default function GiftcardsPage() {
               onChange={(e) => setSearchCode(e.target.value)}
               className="flex-1 bg-gray-200 rounded-md px-3 py-2 text-black"
             />
-            <button
-              type="submit"
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-              Search
-            </button>
             <button
               type="button"
               onClick={() => {

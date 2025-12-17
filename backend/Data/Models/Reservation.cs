@@ -15,6 +15,7 @@ public class Reservation
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }
     public DateTime? BookedAt { get; set; }
+    public string? Note { get; set; }
     public bool IsActive { get; set; }
 
     public User? Employee { get; set; }

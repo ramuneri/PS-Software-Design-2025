@@ -59,9 +59,12 @@ public class ReservationService : IReservationService
             ?? throw new Exception("Service not found");
 
         var utcStart = DateTime.SpecifyKind(dto.StartTime, DateTimeKind.Utc);
-        ValidateWorkingHours(utcStart);
+        var utcEnd = dto.EndTime.HasValue
+            ? DateTime.SpecifyKind(dto.EndTime.Value, DateTimeKind.Utc)
+            : utcStart.AddMinutes(service.DurationMinutes ?? 60);
 
-        var utcEnd = utcStart.AddMinutes(service.DurationMinutes ?? 60);
+        if (utcEnd <= utcStart)
+            throw new BusinessRuleException("End time must be after start time");
 
         if (dto.EmployeeId != null)
         {
@@ -82,6 +85,7 @@ public class ReservationService : IReservationService
             ServiceId = dto.ServiceId,
             StartTime = utcStart,
             EndTime = utcEnd,
+            Note = dto.Note,
             Status = "Booked",
             IsActive = true,
             BookedAt = DateTime.UtcNow
@@ -131,11 +135,12 @@ public class ReservationService : IReservationService
         }
 
 
-        ValidateWorkingHours(finalStartTime);
+        var finalEndTime = dto.EndTime.HasValue
+            ? DateTime.SpecifyKind(dto.EndTime.Value, DateTimeKind.Utc)
+            : finalStartTime.AddMinutes(reservation.Service?.DurationMinutes ?? 60);
 
-        var finalEndTime = finalStartTime.AddMinutes(
-            reservation.Service?.DurationMinutes ?? 60
-        );
+        if (finalEndTime <= finalStartTime)
+            throw new BusinessRuleException("End time must be after start time");
 
         // 🔒 Overlap check if employee exists
         if (finalEmployeeId != null)
@@ -154,6 +159,8 @@ public class ReservationService : IReservationService
         reservation.EmployeeId = finalEmployeeId;
         reservation.StartTime = finalStartTime;
         reservation.EndTime = finalEndTime;
+        if (dto.Note != null)
+            reservation.Note = dto.Note;
 
         if (dto.Status != null)
             reservation.Status = dto.Status;
@@ -189,14 +196,6 @@ public class ReservationService : IReservationService
 
         await _db.SaveChangesAsync();
         return true;
-    }
-
-    private static void ValidateWorkingHours(DateTime startTime)
-    {
-        var hour = startTime.Hour;
-
-        if (hour < 7 || hour >= 20)
-            throw new BusinessRuleException("Reservations are allowed only between 07:00 and 20:00");
     }
 
     private async Task<bool> HasOverlapAsync(

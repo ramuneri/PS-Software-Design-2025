@@ -7,6 +7,8 @@ type Reservation = {
   customerName: string | null;
   serviceName: string | null;
   startTime: string;
+  endTime?: string | null;
+  note?: string | null;
   status: string;
 };
 
@@ -43,6 +45,8 @@ export default function EditReservationPage() {
   const [employees, setEmployees] = useState<User[]>([]);
   const [employeeId, setEmployeeId] = useState("");
   const [startTime, setStartTime] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState(60);
+  const [note, setNote] = useState("");
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -65,6 +69,15 @@ export default function EditReservationPage() {
         setStartTime(
           toDateTimeLocalValue(new Date(reservation.startTime))
         );
+        if (reservation.endTime) {
+          const start = new Date(reservation.startTime).getTime();
+          const end = new Date(reservation.endTime).getTime();
+          const minutes = Math.max(1, Math.round((end - start) / 60000));
+          setDurationMinutes(minutes);
+        } else {
+          setDurationMinutes(60);
+        }
+        setNote(reservation.note ?? "");
       })
       .catch(() => setError("Failed to load reservation"));
   }, [id]);
@@ -90,6 +103,8 @@ const handleSave = async () => {
         body: JSON.stringify({
           employeeId: employeeId || null,
           startTime: new Date(startTime).toISOString(),
+          endTime: new Date(new Date(startTime).getTime() + durationMinutes * 60000).toISOString(),
+          note: note.trim(),
           status,
         }),
       }
@@ -100,10 +115,8 @@ const handleSave = async () => {
 
       if (text.includes("already has a reservation")) {
         setError("This employee is already booked at that time.");
-      } else if (text.includes("07:00")) {
-        setError("Reservations are allowed only between 07:00 and 20:00.");
       } else {
-        setError("Failed to update reservation.");
+        setError(text || "Failed to update reservation.");
       }
       return;
     }
@@ -131,24 +144,35 @@ const handleSave = async () => {
 
         <div className="bg-gray-300 p-6 space-y-4">
 
-          <div>{reservation.serviceName}</div>
-          <div>{reservation.customerName}</div>
+          <div className="space-y-1">
+            <div className="text-sm text-gray-800 font-medium">Service</div>
+            <div className="bg-gray-200 rounded px-3 py-2">{reservation.serviceName}</div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-sm text-gray-800 font-medium">Customer</div>
+            <div className="bg-gray-200 rounded px-3 py-2">{reservation.customerName}</div>
+          </div>
 
-          <select
-            value={employeeId}
-            onChange={(e) => setEmployeeId(e.target.value)}
-            disabled={status === "Completed"}
-            className="w-full bg-gray-400 p-2 rounded"
-          >
-            <option value="">Employee</option>
-            {employees.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.name || e.email}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-1">
+            <div className="text-sm text-gray-800 font-medium">Employee</div>
+            <select
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+              disabled={status === "Completed"}
+              className="w-full bg-gray-400 p-2 rounded"
+            >
+              <option value="">Employee</option>
+              {employees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name || e.email}
+                </option>
+              ))}
+            </select>
+          </div>
 
 
+          <div className="space-y-1">
+            <div className="text-sm text-gray-800 font-medium">Start time</div>
             <input
                 type="datetime-local"
                 value={startTime}
@@ -159,6 +183,41 @@ const handleSave = async () => {
                     status === "Completed" ? "cursor-not-allowed opacity-60" : ""
                 }`}
             />
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-sm text-gray-800 font-medium">Duration (minutes)</div>
+            <input
+              type="number"
+              min={15}
+              step={15}
+              value={durationMinutes}
+              disabled={status === "Completed"}
+              onChange={(e) => setDurationMinutes(Number(e.target.value))}
+              className={`w-full bg-gray-400 p-2 rounded ${
+                  status === "Completed" ? "cursor-not-allowed opacity-60" : ""
+              }`}
+              placeholder="Duration (minutes)"
+            />
+            {startTime && durationMinutes > 0 && (
+              <div className="text-xs text-gray-700">
+                Ends at: {new Date(new Date(startTime).getTime() + durationMinutes * 60000).toLocaleString()}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-sm text-gray-800 font-medium">Notes</div>
+            <textarea
+              placeholder="Notes"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              disabled={status === "Completed"}
+              className={`w-full bg-gray-400 p-2 rounded min-h-[80px] ${
+                  status === "Completed" ? "cursor-not-allowed opacity-60" : ""
+              }`}
+            />
+          </div>
 
 
           <select

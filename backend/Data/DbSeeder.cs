@@ -29,6 +29,7 @@ namespace backend.Data
             _logger.LogInformation("Starting database seeding...");
 
             await _db.Database.MigrateAsync();
+            await EnsureCompatibilityColumnsAsync();
 
             var merchant = await SeedMerchantAsync();
 
@@ -45,6 +46,33 @@ namespace backend.Data
             await SeedGiftcardsAsync(merchant);
 
             _logger.LogInformation("Database seeding completed.");
+        }
+
+        private async Task EnsureCompatibilityColumnsAsync()
+        {
+            // Some teammates may have an older database schema locally. These idempotent ALTERs
+            // prevent runtime errors when new columns are introduced (e.g. "IsActive" on Customers).
+            try
+            {
+                await _db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"identity\".\"Customers\" ADD COLUMN IF NOT EXISTS \"IsActive\" boolean NOT NULL DEFAULT true;"
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to ensure Customers.IsActive column");
+            }
+
+            try
+            {
+                await _db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"identity\".\"Reservations\" ADD COLUMN IF NOT EXISTS \"Note\" text;"
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to ensure Reservations.Note column");
+            }
         }
 
 

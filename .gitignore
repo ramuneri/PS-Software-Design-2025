@@ -35,6 +35,11 @@ frontend/.env.example
 /tests/**/obj/
 /TestResults/
 
+# Local dev tool caches
+.dotnet_home/
+.nuget/
+.local/
+
 # Docker
 frontend/.dockerignore
 backend/.dockerignore
@@ -58,5 +63,4 @@ yarn-error.log*
 # Ignore all build artifacts
 bin/
 obj/
-
 
