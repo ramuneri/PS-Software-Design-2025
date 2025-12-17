@@ -23,6 +23,17 @@ type PaymentDetail = {
     paymentStatus: string;
 };
 
+type TaxBreakdownLine = {
+    ratePercent: number;
+    categoryName?: string | null;
+    amount: number;
+};
+
+type DisplayTaxLine = {
+    label: string;
+    amount: number;
+};
+
 type OrderDetail = {
     id: number;
     customerIdentifier: string;
@@ -35,6 +46,7 @@ type OrderDetail = {
     payments?: PaymentDetail[];
     subTotal: number;
     tax: number;
+    taxBreakdown?: TaxBreakdownLine[];
     totalAmount: number;
 };
 
@@ -1018,8 +1030,8 @@ export default function OrderCheckoutPage() {
                                 <div className="border-t border-gray-300 pt-6 space-y-2">
                                     {(() => {
                                         const displaySubtotal = order?.subTotal ?? subtotal;
-                                        const breakdown = order?.taxBreakdown || [];
-                                        const taxLines = breakdown.length
+                                        const breakdown: TaxBreakdownLine[] = order?.taxBreakdown ?? [];
+                                        const taxLines: DisplayTaxLine[] = breakdown.length
                                             ? breakdown.map((t) => ({
                                                   label: `VAT ${t.ratePercent}% (${t.categoryName || "Tax"})`,
                                                   amount: t.amount,
