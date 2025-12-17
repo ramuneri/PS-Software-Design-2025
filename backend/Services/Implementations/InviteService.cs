@@ -36,6 +36,9 @@ public class InviteService : IInviteService
             throw new BusinessRuleException("Invalid email format");
         }
 
+        var email = dto.Email.Trim();
+        var emailLower = email.ToLowerInvariant();
+
         // Validate role
         if (dto.Role != UserRoles.Owner && dto.Role != UserRoles.Employee && dto.Role != UserRoles.Customer)
         {
@@ -43,8 +46,13 @@ public class InviteService : IInviteService
         }
 
         // Check if user already exists
-        var existingUser = await _userManager.FindByEmailAsync(dto.Email);
-        if (existingUser != null)
+        // NOTE: Some test fixtures insert users directly without setting NormalizedEmail,
+        // so UserManager.FindByEmailAsync() would miss them. Query by Email (case-insensitive)
+        // so both production and tests behave consistently.
+        var userExists = await _db.Users.AnyAsync(u =>
+            u.Email != null && u.Email.ToLower() == emailLower);
+
+        if (userExists)
         {
             throw new BusinessRuleException("User with this email already exists");
         }
@@ -52,7 +60,7 @@ public class InviteService : IInviteService
         // If there's already a pending invite for this email and merchant, expire it
         var existingInvite = await _db.Invites
             .FirstOrDefaultAsync(i =>
-                i.Email.ToLower() == dto.Email.ToLower() &&
+                i.Email.ToLower() == emailLower &&
                 i.MerchantId == merchantId &&
                 !i.IsAccepted &&
                 i.ExpiresAt > DateTime.UtcNow);
@@ -69,7 +77,7 @@ public class InviteService : IInviteService
         // Create invite
         var invite = new Invite
         {
-            Email = dto.Email.ToLower().Trim(),
+            Email = emailLower,
             Role = dto.Role,
             MerchantId = merchantId,
             InvitedByUserId = invitedByUserId,
@@ -140,8 +148,10 @@ public class InviteService : IInviteService
         }
 
         // Check if user already exists (edge case)
-        var existingUser = await _userManager.FindByEmailAsync(invite.Email);
-        if (existingUser != null)
+        var userExists = await _db.Users.AnyAsync(u =>
+            u.Email != null && u.Email.ToLower() == invite.Email.ToLower());
+
+        if (userExists)
         {
             return new ValidateInviteDto(
                 Email: invite.Email,
@@ -201,8 +211,10 @@ public class InviteService : IInviteService
         }
 
         // Check if user already exists
-        var existingUser = await _userManager.FindByEmailAsync(invite.Email);
-        if (existingUser != null)
+        var userExists = await _db.Users.AnyAsync(u =>
+            u.Email != null && u.Email.ToLower() == invite.Email.ToLower());
+
+        if (userExists)
         {
             throw new BusinessRuleException("User with this email already exists");
         }
@@ -274,4 +286,3 @@ public class InviteService : IInviteService
             .Replace('/', '_');
     }
 }
-
