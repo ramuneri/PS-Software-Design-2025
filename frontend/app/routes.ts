@@ -46,6 +46,10 @@ export default [
     route("users/:id/edit", "routes/users/edit.tsx"),
     route("users/:id", "routes/users/details.tsx"),
 
+    route("audit-logs", "routes/audit-logs/index.tsx"),
+
+    route("accept-invite", "routes/accept-invite.tsx"),
+
 
 
 

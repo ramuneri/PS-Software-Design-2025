@@ -2,6 +2,7 @@ using backend.Data;
 using backend.Data.Models;
 using backend.Dtos;
 using backend.Enums;
+using backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,10 +16,12 @@ namespace backend.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly ApplicationDbContext _db;
+    private readonly IAuditLogService _auditLogService;
 
-    public UsersController(ApplicationDbContext db)
+    public UsersController(ApplicationDbContext db, IAuditLogService auditLogService)
     {
         _db = db;
+        _auditLogService = auditLogService;
     }
 
     private string? GetCurrentUserId()
@@ -37,7 +40,7 @@ public class UsersController : ControllerBase
 
     private string? GetCurrentUserRole()
     {
-        return User.FindFirstValue(ClaimTypes.Role) 
+        return User.FindFirstValue(ClaimTypes.Role)
             ?? User.FindFirstValue("role");
     }
 
@@ -52,6 +55,7 @@ public class UsersController : ControllerBase
         var role = GetCurrentUserRole();
         return IsCurrentUserSuperAdmin() || role == UserRoles.Owner;
     }
+
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<UserListDto>>> GetUsers(
@@ -141,14 +145,73 @@ public class UsersController : ControllerBase
         if (dto.Role != null && user.IsSuperAdmin && dto.Role != user.Role)
             return StatusCode(403, "Cannot change role of SuperAdmin");
 
-        if (dto.Name != null) user.Name = dto.Name;
-        if (dto.Surname != null) user.Surname = dto.Surname;
-        if (dto.PhoneNumber != null) user.PhoneNumber = dto.PhoneNumber;
-        if (dto.Role != null) user.Role = dto.Role;
+        // Track old values for audit log
+        var oldValues = new Dictionary<string, object>();
+        var newValues = new Dictionary<string, object>();
+        bool roleChanged = false;
+        string? oldRole = null;
+
+        if (dto.Role != null && dto.Role != user.Role)
+        {
+            oldRole = user.Role;
+            roleChanged = true;
+            oldValues["Role"] = user.Role;
+            newValues["Role"] = dto.Role;
+        }
+
+        if (dto.Name != null && dto.Name != user.Name)
+        {
+            oldValues["Name"] = user.Name ?? "";
+            newValues["Name"] = dto.Name;
+            user.Name = dto.Name;
+        }
+        if (dto.Surname != null && dto.Surname != user.Surname)
+        {
+            oldValues["Surname"] = user.Surname ?? "";
+            newValues["Surname"] = dto.Surname;
+            user.Surname = dto.Surname;
+        }
+        if (dto.PhoneNumber != null && dto.PhoneNumber != user.PhoneNumber)
+        {
+            oldValues["PhoneNumber"] = user.PhoneNumber ?? "";
+            newValues["PhoneNumber"] = dto.PhoneNumber;
+            user.PhoneNumber = dto.PhoneNumber;
+        }
+        if (dto.Role != null)
+        {
+            user.Role = dto.Role;
+        }
 
         user.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+
+        // Log audit entry
+        var currentUserId = GetCurrentUserId();
+
+        if (roleChanged && oldRole != null)
+        {
+            // Log role change separately as it's a critical action
+            await _auditLogService.LogRoleChangedAsync(
+                user.Id,
+                merchantId.Value,
+                oldRole,
+                dto.Role!,
+                currentUserId!
+            );
+        }
+        else if (oldValues.Any())
+        {
+            // Log general update
+            await _auditLogService.LogUserUpdatedAsync(
+                user.Id,
+                merchantId.Value,
+                oldValues.Any() ? oldValues : null,
+                newValues.Any() ? newValues : null,
+                currentUserId
+            );
+        }
+
         return NoContent();
     }
 
@@ -181,6 +244,14 @@ public class UsersController : ControllerBase
         user.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+
+        // Log audit entry
+        await _auditLogService.LogUserDeactivatedAsync(
+            user.Id,
+            merchantId.Value,
+            currentUserId!
+        );
+
         return NoContent();
     }
 
@@ -204,6 +275,15 @@ public class UsersController : ControllerBase
         user.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+
+        // Log audit entry
+        var currentUserId = GetCurrentUserId();
+        await _auditLogService.LogUserRestoredAsync(
+            user.Id,
+            merchantId.Value,
+            currentUserId!
+        );
+
         return NoContent();
     }
 }

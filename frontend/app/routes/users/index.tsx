@@ -42,6 +42,14 @@ export default function UsersListPage() {
   const [query, setQuery] = useState("");
   const [role, setRole] = useState<string>("");
   const [includeInactive, setIncludeInactive] = useState(false);
+  
+  // Invite creation state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("Employee");
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [createdInviteLink, setCreatedInviteLink] = useState<string | null>(null);
 
   async function loadUsers() {
     try {
@@ -152,6 +160,64 @@ export default function UsersListPage() {
     }
   }
 
+  async function handleCreateInvite(e: React.FormEvent) {
+    e.preventDefault();
+    setInviteLoading(true);
+    setInviteError(null);
+    setCreatedInviteLink(null);
+
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/invites`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders(),
+          },
+          body: JSON.stringify({
+            email: inviteEmail.trim(),
+            role: inviteRole,
+          }),
+        }
+      );
+
+      if (res.status === 401) {
+        localStorage.removeItem("access-token");
+        navigate("/login");
+        return;
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: "Failed to create invite" }));
+        throw new Error(errorData.message || `Failed to create invite (${res.status})`);
+      }
+
+      const data = await res.json();
+      setCreatedInviteLink(data.inviteLink);
+      setInviteEmail("");
+    } catch (e: any) {
+      setInviteError(e?.message ?? "Failed to create invite");
+    } finally {
+      setInviteLoading(false);
+    }
+  }
+
+  function copyInviteLink() {
+    if (createdInviteLink) {
+      navigator.clipboard.writeText(createdInviteLink);
+      alert("Invite link copied to clipboard!");
+    }
+  }
+
+  function closeInviteModal() {
+    setShowInviteModal(false);
+    setInviteEmail("");
+    setInviteRole("Employee");
+    setInviteError(null);
+    setCreatedInviteLink(null);
+  }
+
   return (
     <div className="bg-gray-200 flex flex-col text-black" style={{ height: "calc(100vh - 52px)" }}>
       <div className="p-6 flex-1 flex flex-col overflow-hidden space-y-6">
@@ -195,6 +261,21 @@ export default function UsersListPage() {
             >
               Refresh
             </button>
+
+            <button
+              onClick={() => navigate("/audit-logs")}
+              className="bg-gray-200 hover:bg-gray-400 rounded-md px-4 py-2 font-medium"
+            >
+              Audit Logs
+            </button>
+
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="bg-gray-200 hover:bg-gray-400 rounded-md px-4 py-2 font-medium"
+            >
+              Add User
+            </button>
+         
           </div>
         </div>
 
@@ -283,6 +364,119 @@ export default function UsersListPage() {
           </div>
         </div>
       </div>
+
+      {/* Invite Creation Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-500/40">
+          <div className="bg-gray-300 rounded-md w-[500px] max-w-[90vw] p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-black">Create Invite</h2>
+              <button
+                onClick={closeInviteModal}
+                className="text-gray-600 hover:text-black text-xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {createdInviteLink ? (
+              <div className="space-y-4">
+                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                  Invite created successfully!
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-black mb-2">
+                    Invite Link
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={createdInviteLink}
+                      readOnly
+                      className="flex-1 bg-gray-200 rounded-md px-4 py-2 text-sm"
+                    />
+                    <button
+                      onClick={copyInviteLink}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={closeInviteModal}
+                  className="w-full bg-gray-400 hover:bg-gray-500 text-black font-medium py-2 rounded-md"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleCreateInvite} className="space-y-4">
+                {inviteError && (
+                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
+                    {inviteError}
+                  </div>
+                )}
+
+                <div>
+                  <label
+                    htmlFor="invite-email"
+                    className="block text-sm font-medium text-black mb-2"
+                  >
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    id="invite-email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    required
+                    className="w-full bg-gray-200 rounded-md px-4 py-2 border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="user@example.com"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="invite-role"
+                    className="block text-sm font-medium text-black mb-2"
+                  >
+                    Role
+                  </label>
+                  <select
+                    id="invite-role"
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value)}
+                    required
+                    className="w-full bg-gray-200 rounded-md px-4 py-2 border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Employee">Employee</option>
+                    <option value="Customer">Customer</option>
+                    <option value="Owner">Owner</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={closeInviteModal}
+                    className="flex-1 bg-gray-400 hover:bg-gray-500 text-black font-medium py-2 rounded-md"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={inviteLoading}
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white font-medium py-2 rounded-md"
+                  >
+                    {inviteLoading ? "Creating..." : "Create Invite"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

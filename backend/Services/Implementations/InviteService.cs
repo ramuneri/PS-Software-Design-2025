@@ -14,12 +14,14 @@ public class InviteService : IInviteService
 {
     private readonly ApplicationDbContext _db;
     private readonly UserManager<User> _userManager;
+    private readonly IAuditLogService _auditLogService;
     private const int INVITE_EXPIRY_DAYS = 7;
 
-    public InviteService(ApplicationDbContext db, UserManager<User> userManager)
+    public InviteService(ApplicationDbContext db, UserManager<User> userManager, IAuditLogService auditLogService)
     {
         _db = db;
         _userManager = userManager;
+        _auditLogService = auditLogService;
     }
 
     public async Task<CreateInviteResponseDto?> CreateInviteAsync(
@@ -233,6 +235,13 @@ public class InviteService : IInviteService
         invite.IsAccepted = true;
         invite.AcceptedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+
+        // Log audit entry for user creation
+        await _auditLogService.LogUserCreatedAsync(
+            user.Id,
+            user.MerchantId ?? 0,
+            performedByUserId: invite.InvitedByUserId
+        );
 
         return new UserDto(
             Id: user.Id,

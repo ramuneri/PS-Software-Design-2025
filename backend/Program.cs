@@ -87,6 +87,7 @@ builder.Services.AddScoped<IStripePaymentService, StripePaymentService>();
 builder.Services.AddScoped<ITaxService, TaxService>();
 builder.Services.AddScoped<IGiftCardService, GiftCardService>();
 builder.Services.AddScoped<INotificationSmsService, NotificationSmsService>();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddHttpContextAccessor();
