@@ -42,6 +42,20 @@ export default function UsersListPage() {
   const [query, setQuery] = useState("");
   const [role, setRole] = useState<string>("");
   const [includeInactive, setIncludeInactive] = useState(false);
+
+  // Get current user info to check permissions
+  const getCurrentUser = () => {
+    const userJson = localStorage.getItem("user");
+    if (!userJson) return null;
+    try {
+      return JSON.parse(userJson);
+    } catch {
+      return null;
+    }
+  };
+
+  const currentUser = getCurrentUser();
+  const canManageUsers = currentUser && (currentUser.isSuperAdmin || currentUser.role === "Owner");
   
   // Invite creation state
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -262,19 +276,23 @@ export default function UsersListPage() {
               Refresh
             </button>
 
-            <button
-              onClick={() => navigate("/audit-logs")}
-              className="bg-gray-200 hover:bg-gray-400 rounded-md px-4 py-2 font-medium"
-            >
-              Audit Logs
-            </button>
+            {canManageUsers && (
+              <>
+                <button
+                  onClick={() => navigate("/audit-logs")}
+                  className="bg-gray-200 hover:bg-gray-400 rounded-md px-4 py-2 font-medium"
+                >
+                  Audit Logs
+                </button>
 
-            <button
-              onClick={() => setShowInviteModal(true)}
-              className="bg-gray-200 hover:bg-gray-400 rounded-md px-4 py-2 font-medium"
-            >
-              Add User
-            </button>
+                <button
+                  onClick={() => setShowInviteModal(true)}
+                  className="bg-gray-200 hover:bg-gray-400 rounded-md px-4 py-2 font-medium"
+                >
+                  Add User
+                </button>
+              </>
+            )}
          
           </div>
         </div>
@@ -328,36 +346,41 @@ export default function UsersListPage() {
                     {formatDateTime(u.lastLoginAt)}
                   </span>
                   <span className="col-span-2 text-right flex gap-2 justify-end">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/users/${u.id}/edit`);
-                      }}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
-                    >
-                      Edit
-                    </button>
-                    {u.isActive ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeactivate(u.id);
-                        }}
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
-                      >
-                        Deactivate
-                      </button>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRestore(u.id);
-                        }}
-                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"
-                      >
-                        Restore
-                      </button>
+                    {canManageUsers && (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/users/${u.id}/edit`);
+                          }}
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                        >
+                          Edit
+                        </button>
+                        {u.isActive ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeactivate(u.id);
+                            }}
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                          >
+                            Deactivate
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRestore(u.id);
+                            }}
+                            className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"
+                          >
+                            Restore
+                          </button>
+                        )}
+                      </>
                     )}
+                    {!canManageUsers && <span className="text-sm text-gray-500">-</span>}
                   </span>
                 </div>
               ))}

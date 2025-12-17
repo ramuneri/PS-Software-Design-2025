@@ -34,6 +34,10 @@ public class AuthService : IAuthService
         if (user == null || !await _userManager.CheckPasswordAsync(user, password))
             return null;
 
+        // Prevent deactivated users from logging in
+        if (!user.IsActive)
+            return null;
+
         user.LastLoginAt = DateTime.UtcNow;
         user.UpdatedAt = DateTime.UtcNow;
 
@@ -88,6 +92,15 @@ public class AuthService : IAuthService
         var user = await _userManager.FindByIdAsync(tokenEntity.UserId);
         if (user == null)
             return null;
+
+        // Prevent deactivated users from refreshing tokens
+        if (!user.IsActive)
+        {
+            // Revoke the refresh token since user is deactivated
+            tokenEntity.IsRevoked = true;
+            await _context.SaveChangesAsync();
+            return null;
+        }
 
         tokenEntity.IsRevoked = true;
 
