@@ -53,6 +53,7 @@ export default [
 
     route("customers", "routes/customers/index.tsx"),
     route("customers/:id", "routes/customers/$id.tsx"),
+    route("customers/:id/edit", "routes/customers/edit.tsx"),
 
 
 

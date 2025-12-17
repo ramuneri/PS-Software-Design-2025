@@ -1,9 +1,13 @@
+using backend.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace backend.Migrations
 {
+    [DbContext(typeof(ApplicationDbContext))]
+    [Migration("20251217000000_AddIsActiveToCustomer")]
     public partial class AddIsActiveToCustomer : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
