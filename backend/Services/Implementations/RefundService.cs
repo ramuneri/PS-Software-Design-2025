@@ -30,7 +30,9 @@ public class RefundService : IRefundService
                     .ThenInclude(oi => oi.Product)
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Service)
-                .Include(o => o.Payments)
+                .Include(o => o.Payments!)
+                    .ThenInclude(p => p.GiftcardPayments)
+                        .ThenInclude(gp => gp.Giftcard)
                 .Include(o => o.Refunds)
                 .FirstOrDefaultAsync(o => o.Id == orderId);
 
@@ -68,6 +70,30 @@ public class RefundService : IRefundService
             };
 
             context.Refunds.Add(refund);
+
+            // Refund giftcards proportionally
+            var totalPaymentAmount = order.Payments?.Sum(p => p.Amount) ?? 0;
+            if (totalPaymentAmount > 0)
+            {
+                foreach (var payment in order.Payments ?? new List<Payment>())
+                {
+                    var paymentRatio = payment.Amount / totalPaymentAmount;
+                    var paymentRefundAmount = request.Amount * paymentRatio;
+
+                    foreach (var giftcardPayment in payment.GiftcardPayments)
+                    {
+                        var giftcardRefundAmount = giftcardPayment.AmountUsed > 0
+                            ? paymentRefundAmount * (giftcardPayment.AmountUsed / payment.Amount)
+                            : 0;
+
+                        if (giftcardRefundAmount > 0)
+                        {
+                            giftcardPayment.Giftcard.Balance += giftcardRefundAmount;
+                            giftcardPayment.Giftcard.UpdatedAt = DateTime.UtcNow;
+                        }
+                    }
+                }
+            }
 
             await context.SaveChangesAsync();
             await transaction.CommitAsync();
