@@ -21,4 +21,5 @@ public class User : IdentityUser
     public ICollection<Reservation> EmployeeReservations { get; set; } = new List<Reservation>();
     public ICollection<Reservation> CustomerReservations { get; set; } = new List<Reservation>();
     public ICollection<EmployeeService> EmployeeServices { get; set; } = new List<EmployeeService>();
+    public ICollection<Invite> InvitesCreated { get; set; } = new List<Invite>();
 }

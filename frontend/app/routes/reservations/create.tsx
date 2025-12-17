@@ -24,9 +24,14 @@ function toDateTimeLocalValue(date: Date) {
   )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function normalizeArray<T>(value: any): T[] {
-  if (Array.isArray(value)) return value;
-  if (Array.isArray(value?.data)) return value.data;
+function normalizeArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[];
+
+  if (value && typeof value === "object" && "data" in value) {
+    const maybeData = (value as { data?: unknown }).data;
+    if (Array.isArray(maybeData)) return maybeData as T[];
+  }
+
   return [];
 }
 
@@ -131,11 +136,11 @@ export default function CreateReservationPage() {
           throw new Error();
         }
 
-        setServices(normalizeArray(await servicesRes.json()));
-        const employeesData = normalizeArray(await employeesRes.json());
+        setServices(normalizeArray<Service>(await servicesRes.json()));
+        const employeesData = normalizeArray<User>(await employeesRes.json());
         setEmployees(employeesData);
         setEmployeesFiltered(employeesData.slice(0, 5));
-        setCustomers(normalizeArray(await customersRes.json()));
+        setCustomers(normalizeArray<User>(await customersRes.json()));
       } catch {
         setError("Failed to load data");
       }

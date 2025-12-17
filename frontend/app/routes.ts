@@ -51,14 +51,18 @@ export default [
     route("users/:id/edit", "routes/users/edit.tsx"),
     route("users/:id", "routes/users/details.tsx"),
 
+    route("audit-logs", "routes/audit-logs/index.tsx"),
+
+    route("accept-invite", "routes/accept-invite.tsx"),
     route("customers", "routes/customers/index.tsx"),
     route("customers/:id", "routes/customers/$id.tsx"),
     route("customers/:id/edit", "routes/customers/edit.tsx"),
 
+    route("statistics", "routes/statistics.tsx"),
 
 
 
-    
+
     
     route("example", "routes/example.tsx"),
     route("debug", "routes/debug.tsx"),

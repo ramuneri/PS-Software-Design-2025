@@ -1,5 +1,6 @@
 using backend.Data;
 using backend.Dtos;
+using backend.Enums;
 using backend.Mapping;
 using backend.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,7 @@ public class UserService : IUserService
     public async Task<IEnumerable<UserListDto>> GetEmployeesAsync(int merchantId)
     {
         return await _db.Users
-            .Where(u => u.MerchantId == merchantId && u.Role == "Employee")
+            .Where(u => u.MerchantId == merchantId && u.Role == UserRoles.Employee)
             .Select(u => u.ToListDto())
             .ToListAsync();
     }
@@ -26,7 +27,7 @@ public class UserService : IUserService
     public async Task<IEnumerable<UserListDto>> GetCustomersAsync(int merchantId)
     {
         return await _db.Users
-            .Where(u => u.MerchantId == merchantId && u.Role == "Customer")
+            .Where(u => u.MerchantId == merchantId && u.Role == UserRoles.Customer)
             .Select(u => u.ToListDto())
             .ToListAsync();
     }

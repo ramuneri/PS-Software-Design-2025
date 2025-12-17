@@ -33,6 +33,8 @@ namespace backend.Data
         public DbSet<Plan> Plans { get; set; }
         public DbSet<Feature> Features { get; set; }
         public DbSet<PlanFeature> PlanFeatures { get; set; }
+        public DbSet<Invite> Invites { get; set; }
+        public DbSet<AuditLog> AuditLogs { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -392,6 +394,29 @@ namespace backend.Data
 
             builder.Entity<Refund>()
                 .HasIndex(r => r.OrderId);
+            // --------------------------------------------------------
+
+            builder.Entity<Invite>()
+                .HasOne(i => i.Merchant)
+                .WithMany(m => m.Invites)
+                .HasForeignKey(i => i.MerchantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Invite>()
+                .HasOne(i => i.InvitedBy)
+                .WithMany(u => u.InvitesCreated)
+                .HasForeignKey(i => i.InvitedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Invite>()
+                .HasIndex(i => i.Token)
+                .IsUnique();
+
+            builder.Entity<Invite>()
+                .HasIndex(i => i.Email);
+
+            builder.Entity<Invite>()
+                .HasIndex(i => i.MerchantId);
         }
     }
 }

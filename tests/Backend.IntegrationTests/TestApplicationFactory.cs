@@ -120,7 +120,18 @@ public class TestApplicationFactory : WebApplicationFactory<Program>
     // Create client with default auth header
     public HttpClient CreateAuthenticatedClient()
     {
+        return CreateAuthenticatedClient(role: "Owner", merchantId: 1, userId: "test-user-id", isSuperAdmin: false);
+    }
+
+    // Create client with custom claims for testing
+    public HttpClient CreateAuthenticatedClient(string role, int merchantId, string userId = "test-user-id", bool isSuperAdmin = false)
+    {
         var client = CreateClient();
+        // Pass claims via a custom header that TestAuthHandler can read
+        client.DefaultRequestHeaders.Add("X-Test-Role", role);
+        client.DefaultRequestHeaders.Add("X-Test-MerchantId", merchantId.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-UserId", userId);
+        client.DefaultRequestHeaders.Add("X-Test-IsSuperAdmin", isSuperAdmin.ToString());
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Test");
         return client;
     }
@@ -139,11 +150,45 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.Name, "TestUser"),
             new Claim(ClaimTypes.NameIdentifier, "test-user-id"),
         };
+
+        // Read custom claims from headers if present
+        if (Request.Headers.TryGetValue("X-Test-UserId", out var userId))
+        {
+            claims.RemoveAll(c => c.Type == ClaimTypes.NameIdentifier);
+            claims.Add(new Claim(ClaimTypes.NameIdentifier, userId.ToString()));
+        }
+
+        if (Request.Headers.TryGetValue("X-Test-Role", out var role))
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role.ToString()));
+            claims.Add(new Claim("role", role.ToString())); // Also add as "role" claim
+        }
+        else
+        {
+            // Default role
+            claims.Add(new Claim(ClaimTypes.Role, "Owner"));
+            claims.Add(new Claim("role", "Owner"));
+        }
+
+        if (Request.Headers.TryGetValue("X-Test-MerchantId", out var merchantId))
+        {
+            claims.Add(new Claim("merchantId", merchantId.ToString()));
+        }
+        else
+        {
+            // Default merchantId
+            claims.Add(new Claim("merchantId", "1"));
+        }
+
+        if (Request.Headers.TryGetValue("X-Test-IsSuperAdmin", out var isSuperAdmin))
+        {
+            claims.Add(new Claim("isSuperAdmin", isSuperAdmin.ToString()));
+        }
 
         var identity = new ClaimsIdentity(claims, Scheme.Name);
         var principal = new ClaimsPrincipal(identity);
