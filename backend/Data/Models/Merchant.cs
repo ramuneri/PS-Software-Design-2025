@@ -23,4 +23,5 @@ public class Merchant
     public ICollection<MerchantSubscription> Subscriptions { get; set; } = new List<MerchantSubscription>();
     public ICollection<TaxCategories> TaxCategories { get; set; } = new List<TaxCategories>();
     public ICollection<Giftcard> Giftcards { get; set; } = new List<Giftcard>();
+    public ICollection<Invite> Invites { get; set; } = new List<Invite>();
 }
