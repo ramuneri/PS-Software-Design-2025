@@ -37,7 +37,8 @@ public class UsersController : ControllerBase
 
     private string? GetCurrentUserRole()
     {
-        return User.FindFirstValue("role");
+        return User.FindFirstValue(ClaimTypes.Role) 
+            ?? User.FindFirstValue("role");
     }
 
     private bool IsCurrentUserSuperAdmin()
@@ -120,7 +121,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserDto dto)
     {
         if (!CanManageUsers())
-            return Forbid("Only Owners and SuperAdmins can manage users");
+            return StatusCode(403, "Only Owners and SuperAdmins can manage users");
 
         var merchantId = GetCurrentUserMerchantId();
         if (merchantId == null)
@@ -134,11 +135,11 @@ public class UsersController : ControllerBase
 
         // Prevent changing role to Owner unless current user is SuperAdmin
         if (dto.Role == UserRoles.Owner && !IsCurrentUserSuperAdmin())
-            return Forbid("Only SuperAdmins can assign Owner role");
+            return StatusCode(403, "Only SuperAdmins can assign Owner role");
 
         // Prevent changing SuperAdmin status
         if (dto.Role != null && user.IsSuperAdmin && dto.Role != user.Role)
-            return Forbid("Cannot change role of SuperAdmin");
+            return StatusCode(403, "Cannot change role of SuperAdmin");
 
         if (dto.Name != null) user.Name = dto.Name;
         if (dto.Surname != null) user.Surname = dto.Surname;
@@ -155,7 +156,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> DeactivateUser(string id)
     {
         if (!CanManageUsers())
-            return Forbid("Only Owners and SuperAdmins can manage users");
+            return StatusCode(403, "Only Owners and SuperAdmins can manage users");
 
         var merchantId = GetCurrentUserMerchantId();
         if (merchantId == null)
@@ -169,7 +170,7 @@ public class UsersController : ControllerBase
 
         // Prevent deactivating SuperAdmins
         if (user.IsSuperAdmin)
-            return Forbid("Cannot deactivate SuperAdmin");
+            return StatusCode(403, "Cannot deactivate SuperAdmin");
 
         // Prevent deactivating yourself
         var currentUserId = GetCurrentUserId();
@@ -187,7 +188,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> RestoreUser(string id)
     {
         if (!CanManageUsers())
-            return Forbid("Only Owners and SuperAdmins can manage users");
+            return StatusCode(403, "Only Owners and SuperAdmins can manage users");
 
         var merchantId = GetCurrentUserMerchantId();
         if (merchantId == null)

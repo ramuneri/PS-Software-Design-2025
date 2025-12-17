@@ -38,7 +38,8 @@ public class InvitesController : ControllerBase
 
     private string? GetCurrentUserRole()
     {
-        return User.FindFirstValue("role");
+        return User.FindFirstValue(ClaimTypes.Role) 
+            ?? User.FindFirstValue("role");
     }
 
     private bool IsCurrentUserSuperAdmin()
@@ -57,7 +58,7 @@ public class InvitesController : ControllerBase
     public async Task<ActionResult<CreateInviteResponseDto>> CreateInvite([FromBody] CreateInviteDto dto)
     {
         if (!CanCreateInvites())
-            return Forbid("Only Owners and SuperAdmins can create invites");
+            return StatusCode(403, "Only Owners and SuperAdmins can create invites");
 
         var merchantId = GetCurrentUserMerchantId();
         if (merchantId == null)
@@ -69,7 +70,7 @@ public class InvitesController : ControllerBase
 
         // Prevent creating invites for Owner role unless current user is SuperAdmin
         if (dto.Role == UserRoles.Owner && !IsCurrentUserSuperAdmin())
-            return Forbid("Only SuperAdmins can invite users with Owner role");
+            return StatusCode(403, "Only SuperAdmins can invite users with Owner role");
 
         try
         {

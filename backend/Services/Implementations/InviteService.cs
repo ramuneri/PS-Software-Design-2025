@@ -258,7 +258,11 @@ public class InviteService : IInviteService
         {
             rng.GetBytes(bytes);
         }
-        return Convert.ToBase64UrlString(bytes);
+        // Convert to base64 and make URL-safe (replace + with -, / with _, remove padding)
+        return Convert.ToBase64String(bytes)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
     }
 }
 

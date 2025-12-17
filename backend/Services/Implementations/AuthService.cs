@@ -143,6 +143,7 @@ public class AuthService : IAuthService
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email!),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Role, user.Role ?? UserRoles.Employee),
             new Claim("role", user.Role ?? UserRoles.Employee),
             new Claim("merchantId", user.MerchantId?.ToString() ?? ""),
             new Claim("isSuperAdmin", user.IsSuperAdmin.ToString().ToLower())
