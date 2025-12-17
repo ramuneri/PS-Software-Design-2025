@@ -24,7 +24,7 @@ export default function CustomersListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [includeInactive, setIncludeInactive] = useState(false);
+  const [showInactiveOnly, setShowInactiveOnly] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export default function CustomersListPage() {
       setLoading(true);
       setError(null);
       const params = new URLSearchParams({
-        includeInactive: String(includeInactive),
+        includeInactive: String(showInactiveOnly),
         limit: "200",
       });
       if (query.trim()) params.set("q", query.trim());
@@ -81,17 +81,21 @@ export default function CustomersListPage() {
 
   useEffect(() => {
     loadCustomers();
-  }, [includeInactive]);
+  }, [showInactiveOnly]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return customers;
-    return customers.filter((c) =>
+    const visible = showInactiveOnly
+      ? customers.filter((c) => c.isActive === false)
+      : customers.filter((c) => c.isActive !== false);
+
+    if (!q) return visible;
+    return visible.filter((c) =>
       `${c.name ?? ""} ${c.surname ?? ""} ${c.email ?? ""} ${c.phone ?? ""}`
         .toLowerCase()
         .includes(q)
     );
-  }, [customers, query]);
+  }, [customers, query, showInactiveOnly]);
 
   const handleCreate = async () => {
     const name = newCustomer.name.trim();
@@ -266,10 +270,10 @@ export default function CustomersListPage() {
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
-              checked={includeInactive}
-              onChange={(e) => setIncludeInactive(e.target.checked)}
+              checked={showInactiveOnly}
+              onChange={(e) => setShowInactiveOnly(e.target.checked)}
             />
-            <span>Show inactive</span>
+            <span>Show inactive only</span>
           </label>
         </div>
 

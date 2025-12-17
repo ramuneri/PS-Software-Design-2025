@@ -7,6 +7,7 @@ type Customer = {
   surname?: string | null;
   email?: string | null;
   phone?: string | null;
+  isActive?: boolean;
 };
 
 type Reservation = {
@@ -48,56 +49,128 @@ export default function CustomerDetailPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      if (!id) return;
-      setLoading(true);
-      setError(null);
-      try {
-        // fetch customer
-        const custRes = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/customers/${id}`,
-          { headers: authHeaders() }
-        );
-        if (custRes.status === 404) {
-          setError("Customer not found");
-          setCustomer(null);
-          setReservations([]);
-          setLoading(false);
-          return;
-        }
-        custRes.ok || (() => { throw new Error("Failed to load customer"); })();
-        const custJson: DataResponse<Customer> | Customer = await custRes.json();
-        setCustomer((custJson as any).data ?? (custJson as Customer));
-
-        // fetch reservations (services only)
-        const resRes = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/reservations?includeInactive=true`,
-          { headers: authHeaders() }
-        );
-        if (resRes.ok) {
-          const resJson: Reservation[] | DataResponse<Reservation[]> = await resRes.json();
-          const resList = Array.isArray(resJson)
-            ? resJson
-            : Array.isArray((resJson as any).data)
-            ? (resJson as any).data
-            : [];
-          setReservations(resList);
-        } else {
-          setReservations([]);
-        }
-      } catch (e: any) {
-        setError(e?.message || "Failed to load customer");
+  const load = async () => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      // fetch customer
+      const custRes = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/customers/${id}`,
+        { headers: { ...authHeaders(), "X-Merchant-Id": "1" } }
+      );
+      if (custRes.status === 404) {
+        setError("Customer not found");
         setCustomer(null);
         setReservations([]);
-      } finally {
         setLoading(false);
+        return;
       }
-    };
+      if (custRes.status === 401) {
+        localStorage.removeItem("access-token");
+        navigate("/login");
+        return;
+      }
+      if (!custRes.ok) {
+        const txt = await custRes.text();
+        throw new Error(txt || "Failed to load customer");
+      }
 
+      const custJson: DataResponse<Customer> | Customer = await custRes.json();
+      const loadedCustomer = (custJson as any).data ?? (custJson as Customer);
+      setCustomer(loadedCustomer);
+
+      // fetch reservations (services only)
+      const resRes = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/reservations?includeInactive=true`,
+        { headers: authHeaders() }
+      );
+      if (resRes.ok) {
+        const resJson: Reservation[] | DataResponse<Reservation[]> =
+          await resRes.json();
+        const resList = Array.isArray(resJson)
+          ? resJson
+          : Array.isArray((resJson as any).data)
+          ? (resJson as any).data
+          : [];
+        setReservations(resList);
+      } else {
+        setReservations([]);
+      }
+    } catch (e: any) {
+      setError(e?.message || "Failed to load customer");
+      setCustomer(null);
+      setReservations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const handleDelete = async () => {
+    if (!id) return;
+    if (!window.confirm("Deactivate this customer?")) return;
+    try {
+      setSaving(true);
+      setError(null);
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/customers/${id}`,
+        {
+          method: "DELETE",
+          headers: { ...authHeaders(), "X-Merchant-Id": "1" },
+        }
+      );
+      if (res.status === 401) {
+        localStorage.removeItem("access-token");
+        navigate("/login");
+        return;
+      }
+      if (!res.ok && res.status !== 204) {
+        const txt = await res.text();
+        throw new Error(txt || "Failed to delete customer");
+      }
+      await load();
+    } catch (e: any) {
+      setError(e?.message || "Failed to delete customer");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!id) return;
+    try {
+      setSaving(true);
+      setError(null);
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/customers/${id}/restore`,
+        {
+          method: "POST",
+          headers: { ...authHeaders(), "X-Merchant-Id": "1" },
+        }
+      );
+      if (res.status === 401) {
+        localStorage.removeItem("access-token");
+        navigate("/login");
+        return;
+      }
+      if (!res.ok && res.status !== 204) {
+        const txt = await res.text();
+        throw new Error(txt || "Failed to restore customer");
+      }
+      await load();
+    } catch (e: any) {
+      setError(e?.message || "Failed to restore customer");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const reservationsForCustomer = useMemo(() => {
     if (!customer) return [];
@@ -129,6 +202,7 @@ export default function CustomerDetailPage() {
   const displayName = customer
     ? [customer.name, customer.surname].filter(Boolean).join(" ") || customer.email || "Customer"
     : "Customer";
+  const isActive = customer?.isActive !== false;
 
   return (
     <div className="min-h-screen bg-gray-200 text-black p-6 flex justify-center">
@@ -157,13 +231,36 @@ export default function CustomerDetailPage() {
                 <div className="text-xl font-semibold">{displayName}</div>
                 <div className="text-gray-700">{customer.phone || "No phone"}</div>
                 <div className="text-gray-700">{customer.email || "No email"}</div>
+                <div className="text-sm text-gray-700">
+                  Status: {isActive ? "Active" : "Inactive"}
+                </div>
               </div>
-              <button
-                onClick={() => navigate(`/customers/${customer.id}/edit`)}
-                className="bg-gray-400 hover:bg-gray-500 text-black px-4 py-2 rounded"
-              >
-                Edit
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => navigate(`/customers/${customer.id}/edit`)}
+                  disabled={saving}
+                  className="bg-gray-400 hover:bg-gray-500 text-black px-4 py-2 rounded disabled:opacity-60"
+                >
+                  Edit
+                </button>
+                {isActive ? (
+                  <button
+                    onClick={handleDelete}
+                    disabled={saving}
+                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded disabled:opacity-60"
+                  >
+                    Delete
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleRestore}
+                    disabled={saving}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded disabled:opacity-60"
+                  >
+                    Restore
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="bg-gray-300 rounded-md p-4">
@@ -197,7 +294,7 @@ export default function CustomerDetailPage() {
                       <span>{r.employeeName ?? "Employee"}</span>
                       <span>{r.serviceName ?? "Service"}</span>
                       <button
-                        onClick={() => navigate(`/reservations/edit/${r.id}`)}
+                        onClick={() => navigate(`/reservations/${r.id}/edit`)}
                         className="text-blue-700 hover:underline text-right"
                       >
                         Edit

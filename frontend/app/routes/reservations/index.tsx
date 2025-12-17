@@ -28,14 +28,14 @@ export default function ReservationsPage() {
 
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [includeInactive, setIncludeInactive] = useState(false);
+  const [showInactiveOnly, setShowInactiveOnly] = useState(false);
 
   const loadReservations = async () => {
     try {
       setLoading(true);
 
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/reservations?includeInactive=${includeInactive}`,
+        `${import.meta.env.VITE_API_URL}/api/reservations?includeInactive=${showInactiveOnly}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -59,7 +59,11 @@ export default function ReservationsPage() {
 
   useEffect(() => {
     loadReservations();
-  }, [includeInactive]);
+  }, [showInactiveOnly]);
+
+  const visibleReservations = showInactiveOnly
+    ? reservations.filter((r) => !r.isActive)
+    : reservations;
 
   const cancelReservation = async (id: number) => {
     await fetch(
@@ -114,10 +118,10 @@ export default function ReservationsPage() {
         <div className="flex items-center gap-3">
           <input
             type="checkbox"
-            checked={includeInactive}
-            onChange={(e) => setIncludeInactive(e.target.checked)}
+            checked={showInactiveOnly}
+            onChange={(e) => setShowInactiveOnly(e.target.checked)}
           />
-          <span className="text-black">Show inactive</span>
+          <span className="text-black">Show inactive only</span>
         </div>
 
 
@@ -134,7 +138,7 @@ export default function ReservationsPage() {
 
         {/* LIST */}
         <div className="space-y-3">
-          {reservations.map((r) => (
+          {visibleReservations.map((r) => (
             <div
               key={r.id}
               className={`grid grid-cols-7 bg-gray-300 rounded-md px-4 py-3 items-center text-black ${
