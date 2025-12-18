@@ -53,6 +53,7 @@ export default [
 
     route("audit-logs", "routes/audit-logs/index.tsx"),
 
+    route("login", "routes/login.tsx"),
     route("accept-invite", "routes/accept-invite.tsx"),
     route("customers", "routes/customers/index.tsx"),
     route("customers/:id", "routes/customers/$id.tsx"),

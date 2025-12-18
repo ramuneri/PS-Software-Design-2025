@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
+import { apiFetch } from "../../api";
 
 type OrderItem = {
     id: number;
@@ -97,15 +98,11 @@ export default function OrderViewPage() {
         if (!window.confirm("Are you sure you want to cancel this order?")) return;
 
         try {
-            const token = localStorage.getItem("access-token");
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/orders/${id}/cancel`, {
+            const res = await apiFetch(`${import.meta.env.VITE_API_URL}/orders/${id}/cancel`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
             });
 
+            if (res.status === 401) return;
             if (!res.ok) throw new Error(`Failed to cancel order (${res.status})`);
 
             await loadOrder();

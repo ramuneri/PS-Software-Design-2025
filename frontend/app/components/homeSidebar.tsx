@@ -89,7 +89,6 @@ export default function Sidebar() {
         onToggle={() => toggleSection("management")}
         links={[
           { name: "User List", path: "/users" },
-          { name: "Merchant List & Management", path: "/merchants" },
         ]}
       />
     </aside>

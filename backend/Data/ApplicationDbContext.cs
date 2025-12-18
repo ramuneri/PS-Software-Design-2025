@@ -208,11 +208,11 @@ namespace backend.Data
                 .HasForeignKey(p => p.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Configure Refund -> Payment relationship
+            // Configure Refund -> Order relationship
             builder.Entity<Refund>()
-                .HasOne(r => r.Payment)
-                .WithMany()
-                .HasForeignKey(r => r.PaymentId)
+                .HasOne(r => r.Order)
+                .WithMany(o => o.Refunds)
+                .HasForeignKey(r => r.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Configure GiftcardPayment relationships

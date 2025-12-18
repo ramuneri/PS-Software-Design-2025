@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate, useOutletContext, useSearchParams } from "react-router";
 
 type ValidateInviteResponse = {
   email: string;
@@ -8,10 +8,17 @@ type ValidateInviteResponse = {
   message?: string | null;
 };
 
+type UserOutletContext = {
+  setUser: React.Dispatch<
+    React.SetStateAction<{ name?: string; email: string } | null>
+  >;
+};
+
 export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get("token");
+  const { setUser } = useOutletContext<UserOutletContext>();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,6 +28,29 @@ export default function AcceptInvite() {
   const [validating, setValidating] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inviteInfo, setInviteInfo] = useState<ValidateInviteResponse | null>(null);
+
+  useEffect(() => {
+    const existingToken = localStorage.getItem("access-token");
+    const existingUser = localStorage.getItem("user");
+
+    if (!existingToken && !existingUser) return;
+
+    if (existingToken) {
+      fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${existingToken}`,
+        },
+        body: JSON.stringify({ allSessions: false }),
+        credentials: "include",
+      }).catch(() => undefined);
+    }
+
+    localStorage.removeItem("access-token");
+    localStorage.removeItem("user");
+    setUser(null);
+  }, [setUser]);
 
   useEffect(() => {
     async function validateInvite() {
@@ -101,13 +131,10 @@ export default function AcceptInvite() {
 
       const result = await response.json();
 
-      // Store user data and token if provided
-      if (result.accessToken) {
-        localStorage.setItem("access-token", result.accessToken);
-      }
-      if (result.user) {
-        localStorage.setItem("user", JSON.stringify(result.user));
-      }
+      // Ensure the current session stays logged out (invite accept = account creation only)
+      localStorage.removeItem("access-token");
+      localStorage.removeItem("user");
+      setUser(null);
 
       // Show success message and redirect
       alert("Account created successfully! You can now log in.");
@@ -255,4 +282,3 @@ export default function AcceptInvite() {
     </div>
   );
 }
-
