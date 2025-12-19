@@ -90,6 +90,8 @@ export default function ServicesPage() {
 
         {/* CONTROLS */}
         <div className="bg-gray-300 rounded-md p-6 space-y-4">
+          
+          {/* Checkbox */}
           <label className="flex items-center gap-2 text-black text-sm">
             <input
               type="checkbox"
@@ -99,6 +101,7 @@ export default function ServicesPage() {
             Show inactive
           </label>
 
+          {/* Search */}
           <div className="flex justify-center">
             <div className="flex items-center bg-gray-200 border border-gray-400 rounded-md w-full max-w-3xl px-4 py-3">
               <input
@@ -113,7 +116,7 @@ export default function ServicesPage() {
           </div>
         </div>
 
-        {/* HEADERS */}
+        {/* TABLE HEADERS */}
         <div className="grid grid-cols-4 px-4 text-sm font-medium text-black">
           <span>Name</span>
           <span>Duration</span>
@@ -121,7 +124,7 @@ export default function ServicesPage() {
           <span className="text-right pr-6">Actions</span>
         </div>
 
-        {/* ROWS */}
+        {/* SERVICES LIST */}
         <div className="space-y-3">
           {filteredServices.map((service) => (
             <div
@@ -131,21 +134,17 @@ export default function ServicesPage() {
               }`}
             >
               <span>{service.name}</span>
-
               <span>
                 {service.durationMinutes >= 60
                   ? `${service.durationMinutes / 60}hr`
                   : `${service.durationMinutes}min`}
               </span>
-
               <span>{service.defaultPrice}</span>
 
               {/* ACTION BUTTONS */}
               <div className="flex gap-2 justify-end">
                 <button
-                  onClick={() =>
-                    navigate(`/services/${service.serviceId}/edit`)
-                  }
+                  onClick={() => navigate(`/services/${service.serviceId}/edit`)}
                   className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
                 >
                   Edit

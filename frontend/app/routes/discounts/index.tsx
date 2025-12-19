@@ -82,7 +82,7 @@ export default function DiscountsPage() {
           Discount List
         </div>
 
-        {/* Show inactive checkbox */}
+        {/* Checkbox */}
         <div className="flex items-center gap-3">
           <input
             type="checkbox"
@@ -138,8 +138,7 @@ export default function DiscountsPage() {
               {/* ACTION BUTTONS */}
               <div className="flex gap-2 justify-end">
                 <button
-                  onClick={() => 
-                    navigate(`/discounts/${discount.id}/edit`)}
+                  onClick={() => navigate(`/discounts/${discount.id}/edit`)}
                   className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
                 >
                   Edit
