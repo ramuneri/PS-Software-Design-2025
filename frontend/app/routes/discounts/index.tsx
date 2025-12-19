@@ -48,6 +48,7 @@ export default function DiscountsPage() {
     }
   };
 
+  
   useEffect(() => {
     loadDiscounts();
   }, [includeInactive]);
@@ -137,7 +138,8 @@ export default function DiscountsPage() {
               {/* ACTION BUTTONS */}
               <div className="flex gap-2 justify-end">
                 <button
-                  onClick={() => navigate(`/discounts/${discount.id}/edit`)}
+                  onClick={() => 
+                    navigate(`/discounts/${discount.id}/edit`)}
                   className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
                 >
                   Edit
@@ -145,15 +147,15 @@ export default function DiscountsPage() {
 
                 {discount.isActive ? (
                   <button
-                    className="px-3 py-1 bg-red-400 hover:bg-red-500 text-black rounded"
                     onClick={() => deleteDiscount(discount.id)}
+                    className="px-3 py-1 bg-red-400 hover:bg-red-500 text-black rounded"
                   >
                     Delete
                   </button>
                 ) : (
                   <button
-                    className="px-3 py-1 bg-green-400 hover:bg-green-500 text-black rounded"
                     onClick={() => restoreDiscount(discount.id)}
+                    className="px-3 py-1 bg-green-400 hover:bg-green-500 text-black rounded"
                   >
                     Restore
                   </button>
@@ -163,7 +165,6 @@ export default function DiscountsPage() {
           ))}
         </div>
 
-        {/* CREATE BUTTON */}
         <div className="pt-6">
           <button
             onClick={() => navigate("/discounts/create")}
