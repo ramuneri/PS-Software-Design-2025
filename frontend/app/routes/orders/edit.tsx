@@ -539,7 +539,6 @@ export default function ModifyOrderPage() {
                             </div>
                         )}
 
-                        {/* Right Side - Items */}
                         <div className="space-y-4 flex flex-col">
                             {/* Items Header */}
                             <div className="bg-gray-400 rounded-md py-3 px-4 text-center text-white font-medium">

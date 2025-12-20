@@ -193,7 +193,6 @@ export default function CreateOrderPage() {
         );
 
         if (existingItem) {
-            // Increment quantity
             setItems(
                 items.map((item) =>
                     item.productId === selectedProduct.id && item.variationId === selectedVariation
@@ -206,7 +205,6 @@ export default function CreateOrderPage() {
                 )
             );
         } else {
-            // Add new item
             setItems([
                 ...items,
                 {
@@ -436,18 +434,18 @@ export default function CreateOrderPage() {
                         )}
 
                         {/* Right Side - Items */}
-                        <div className="space-y-4 flex flex-col">
+                        <div className="space-y-4 flex flex-col text-black">
                             {/* Items Header */}
-                            <div className="bg-gray-400 rounded-md py-3 px-4 text-center text-white font-medium">
+                            <div className="bg-gray-300 rounded-md py-3 px-4 text-center  font-medium">
                                 Items
                             </div>
 
                             {/* Table Header */}
-                            <div className="grid grid-cols-12 gap-3 px-4 text-white font-medium">
-                                <span className="col-span-5 text-black">Item name</span>
-                                <span className="col-span-2 text-center text-black">Quantity</span>
-                                <span className="col-span-3 text-center text-black">Total price</span>
-                                <span className="col-span-2 text-center text-black">Delete</span>
+                            <div className="grid grid-cols-12 gap-3 px-4 text-black font-medium">
+                                <span className="col-span-5">Item name</span>
+                                <span className="col-span-2 text-center">Quantity</span>
+                                <span className="col-span-3 text-center">Total price</span>
+                                <span className="col-span-2 text-center">Delete</span>
                             </div>
 
                             {/* Table Rows - Scrollable */}

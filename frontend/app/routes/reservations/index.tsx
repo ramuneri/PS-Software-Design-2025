@@ -97,7 +97,7 @@ export default function ReservationsPage() {
 
         {/* HEADER */}
         <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
-          Reservations
+          Reservations Calendar
         </div>
 
         <div className="mt-10">
@@ -113,6 +113,13 @@ export default function ReservationsPage() {
             Create Reservation
           </button>
         </div>
+
+        <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
+          All Time Reservations
+        </div>
+        
+        
+
 
         {/* SHOW INACTIVE */}
         <div className="flex items-center gap-3">

@@ -353,7 +353,7 @@ export default function UsersListPage() {
                             e.stopPropagation();
                             navigate(`/users/${u.id}/edit`);
                           }}
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                          className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
                         >
                           Edit
                         </button>
@@ -363,7 +363,7 @@ export default function UsersListPage() {
                               e.stopPropagation();
                               handleDeactivate(u.id);
                             }}
-                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
+                            className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
                           >
                             Deactivate
                           </button>

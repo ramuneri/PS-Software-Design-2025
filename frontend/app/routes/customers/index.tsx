@@ -243,7 +243,7 @@ export default function CustomersListPage() {
               type="button"
               onClick={handleCreate}
               disabled={creating}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded disabled:opacity-60"
+              className="bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded-md text-black"
             >
               {creating ? "Creating..." : "Create customer"}
             </button>
@@ -259,13 +259,6 @@ export default function CustomersListPage() {
               placeholder="Search by name, email, phone…"
               className="flex-1 bg-gray-200 rounded-md px-3 py-2"
             />
-            <button
-              type="button"
-              onClick={loadCustomers}
-              className="bg-gray-400 hover:bg-gray-500 text-black px-4 py-2 rounded"
-            >
-              Refresh
-            </button>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input
