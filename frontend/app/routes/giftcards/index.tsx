@@ -66,7 +66,6 @@ export default function GiftcardsPage() {
     loadGiftcards();
   }, [includeInactive]);
 
-  /** 🔍 Client-side filtering (same pattern as Services) */
   const filteredGiftcards = giftcards.filter((g) => {
     if (!includeInactive && !g.isActive) return false;
 
@@ -94,10 +93,10 @@ export default function GiftcardsPage() {
           </div>
         )}
 
-        {/* CONTROLS (Services-style) */}
+        {/* CONTROLS */}
         <div className="bg-gray-300 rounded-md p-6 space-y-4">
 
-          {/* Show inactive */}
+          {/* Checkbox */}
           <label className="flex items-center gap-2 text-black text-sm">
             <input
               type="checkbox"

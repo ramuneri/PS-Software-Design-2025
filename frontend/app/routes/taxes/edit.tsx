@@ -116,7 +116,7 @@ export default function TaxEdit() {
           </div>
 
           {/* ACTIONS */}
-          <div className="flex justify-center gap-4 pt-6">
+          <div className="flex gap-4 pt-4">
             <button
               onClick={save}
               className="bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded-md text-black"
