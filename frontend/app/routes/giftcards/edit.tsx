@@ -130,17 +130,11 @@ export default function GiftcardEditPage() {
 
   return (
     <div className="min-h-screen bg-gray-200 p-6 flex justify-center">
-      <div className="w-[90%] max-w-md space-y-6">
+      <div className="w-[90%] max-w-3xl space-y-6">
         
         {/* HEADER */}
-        <div className="bg-gray-300 rounded-md py-3 px-4 text-left">
-          <button
-            onClick={() => navigate(`/giftcards/view/${giftcard.id}`)}
-            className="text-blue-600 hover:text-blue-700 underline text-sm mb-2"
-          >
-            ← Back to Details
-          </button>
-          <div className="text-black font-medium text-lg">Edit Gift Card</div>
+        <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
+          <div>Edit Gift Card</div>
         </div>
 
         {/* CODE DISPLAY */}
@@ -163,7 +157,7 @@ export default function GiftcardEditPage() {
           
           {/* BALANCE */}
           <div>
-            <label className="block mb-1 text-sm font-medium">
+            <label className="block mb-1 text-sm">
               Current Balance (€)
             </label>
             <input
@@ -184,7 +178,7 @@ export default function GiftcardEditPage() {
 
           {/* EXPIRATION DATE */}
           <div>
-            <label className="block mb-1 text-sm font-medium">
+            <label className="block mb-1 text-sm">
               Expiration Date
             </label>
             <input
@@ -205,7 +199,7 @@ export default function GiftcardEditPage() {
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 px-6 py-2 rounded-md text-white font-medium"
+              className="bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded-md text-black"
             >
               {saving ? "Saving..." : "Save"}
             </button>
@@ -213,7 +207,7 @@ export default function GiftcardEditPage() {
             <button
               type="button"
               onClick={() => navigate(`/giftcards/view/${giftcard.id}`)}
-              className="flex-1 bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded-md text-black font-medium"
+              className="bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded-md text-black"
             >
               Cancel
             </button>

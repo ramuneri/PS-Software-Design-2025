@@ -81,7 +81,7 @@ export default function GiftcardCreate() {
 
   return (
     <div className="min-h-screen bg-gray-200 p-6 flex justify-center">
-      <div className="w-[90%] max-w-md space-y-6">
+      <div className="w-[90%] max-w-3xl space-y-6">
         
         {/* PAGE HEADER */}
         <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
@@ -103,9 +103,7 @@ export default function GiftcardCreate() {
           
           {/* INITIAL BALANCE */}
           <div>
-            <label className="block mb-1 text-sm font-medium">
-              Initial Balance (€)
-            </label>
+            <label className="block mb-1 text-sm">Initial Balance (€)</label>
             <input
               type="number"
               step="0.01"
@@ -117,29 +115,21 @@ export default function GiftcardCreate() {
               }
               required
             />
-            <div className="text-xs text-gray-600 mt-1">
-              The amount available on the gift card
-            </div>
           </div>
 
           {/* CODE (OPTIONAL) */}
           <div>
-            <label className="block mb-1 text-sm font-medium">
-              Code (Optional)
-            </label>
+            <label className="block mb-1 text-sm">Code (Optional)</label>
             <input
               type="text"
               className="bg-gray-200 rounded-md p-2 w-full text-black"
               value={form.code}
               onChange={(e) => setForm({ ...form, code: e.target.value })}
-              placeholder="Leave empty for auto-generated code"
+              placeholder="Leave empty for auto-generated code or create yours"
             />
-            <div className="text-xs text-gray-600 mt-1">
-              If left empty, a unique code will be automatically generated
-            </div>
           </div>
 
-          {/* QUICK PRESET BUTTONS */}
+          {/* BUTTONS */}
           <div>
             <label className="block mb-2 text-sm font-medium">
               Quick Amounts
@@ -164,12 +154,11 @@ export default function GiftcardCreate() {
             </div>
           </div>
 
-          {/* BUTTONS */}
           <div className="flex gap-4 pt-4">
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 px-6 py-2 rounded-md text-white font-medium"
+              className="bg-green-400 hover:bg-gray-500 px-6 py-2 rounded-md text-black"
             >
               {loading ? "Creating..." : "Create"}
             </button>
@@ -177,7 +166,7 @@ export default function GiftcardCreate() {
             <button
               type="button"
               onClick={() => navigate("/giftcards")}
-              className="flex-1 bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded-md text-black font-medium"
+              className="bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded-md text-black"
             >
               Cancel
             </button>

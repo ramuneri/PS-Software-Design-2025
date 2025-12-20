@@ -131,17 +131,11 @@ export default function GiftcardViewPage() {
 
   return (
     <div className="min-h-screen bg-gray-200 p-6 flex justify-center">
-      <div className="w-[90%] max-w-2xl space-y-6">
+      <div className="w-[90%] max-w-3xl space-y-6">
         
         {/* HEADER */}
-        <div className="bg-gray-300 rounded-md py-3 px-4 text-left">
-          <button
-            onClick={() => navigate("/giftcards")}
-            className="text-blue-600 hover:text-blue-700 underline text-sm mb-2"
-          >
-            ← Back to List
-          </button>
-          <div className="text-black font-medium text-lg">Gift Card View</div>
+        <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
+          Gift Card View
         </div>
 
         {/* ERROR MESSAGE */}
@@ -162,12 +156,12 @@ export default function GiftcardViewPage() {
           </div>
 
           {/* STATUS BADGE */}
-          <div className="flex gap-2">
+          <div>
             <div
-              className={`px-3 py-1 rounded text-sm font-medium ${
+              className={`bg-gray-200 p-2 rounded w-full text-black ${
                 giftcard.isActive
-                  ? "bg-green-200 text-green-800"
-                  : "bg-red-200 text-red-800"
+                  ? "bg-green-100"
+                  : "bg-red-100"
               }`}
             >
               {giftcard.isActive ? "Active" : "Inactive"}
@@ -263,14 +257,14 @@ export default function GiftcardViewPage() {
         <div className="flex gap-4 justify-end">
           <button
             onClick={() => navigate("/giftcards")}
-            className="px-6 py-2 bg-gray-400 hover:bg-gray-500 text-black rounded"
+            className="bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded-md text-black"
           >
             Back
           </button>
           {giftcard.isActive && (
             <button
               onClick={() => navigate(`/giftcards/edit/${giftcard.id}`)}
-              className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
+              className="bg-blue-400 hover:bg-bue-500 px-6 py-2 rounded-md text-black"
             >
               Edit
             </button>
@@ -278,14 +272,14 @@ export default function GiftcardViewPage() {
           {giftcard.isActive ? (
             <button
               onClick={deleteGiftcard}
-              className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded"
+              className="bg-red-400 hover:bg-red-500 px-6 py-2 rounded-md text-black"
             >
               Delete
             </button>
           ) : (
             <button
               onClick={restoreGiftcard}
-              className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded"
+              className="bg-green-400 hover:bg-green-500 px-6 py-2 rounded-md text-black"
             >
               Restore
             </button>

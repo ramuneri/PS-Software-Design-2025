@@ -22,12 +22,14 @@ export default function GiftcardsPage() {
   const [giftcards, setGiftcards] = useState<Giftcard[]>([]);
   const [loading, setLoading] = useState(true);
   const [includeInactive, setIncludeInactive] = useState(false);
-  const [searchCode, setSearchCode] = useState("");
+  const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const loadGiftcards = async () => {
     try {
+      setLoading(true);
       setError(null);
+
       const merchantId = 1;
       const params = new URLSearchParams({
         includeInactive: String(includeInactive),
@@ -46,18 +48,14 @@ export default function GiftcardsPage() {
       );
 
       if (!res.ok) {
-        throw new Error(`Failed to load giftcards: ${res.status}`);
+        throw new Error(`Failed to load giftcards (${res.status})`);
       }
 
       const data = await res.json();
-      const all = Array.isArray(data.data) ? data.data : [];
-      const trimmed = searchCode.trim().toLowerCase();
-      const filtered = trimmed
-        ? all.filter((g: any) => (g.code ?? "").toLowerCase().includes(trimmed))
-        : all;
-      setGiftcards(filtered);
+      const rows = Array.isArray(data.data) ? data.data : [];
+      setGiftcards(rows);
     } catch (err: any) {
-      setError(err.message || "Failed to load giftcards");
+      setError(err?.message ?? "Failed to load giftcards");
       setGiftcards([]);
     } finally {
       setLoading(false);
@@ -66,51 +64,16 @@ export default function GiftcardsPage() {
 
   useEffect(() => {
     loadGiftcards();
-  }, [includeInactive, searchCode]);
+  }, [includeInactive]);
 
-  const deleteGiftcard = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this giftcard?")) return;
+  /** 🔍 Client-side filtering (same pattern as Services) */
+  const filteredGiftcards = giftcards.filter((g) => {
+    if (!includeInactive && !g.isActive) return false;
 
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/giftcards/${id}`,
-        {
-          method: "DELETE",
-          headers: authHeaders(),
-        }
-      );
+    if (!search.trim()) return true;
 
-      if (!res.ok) {
-        alert("Failed to delete giftcard");
-        return;
-      }
-
-      loadGiftcards();
-    } catch (err) {
-      alert("Error deleting giftcard");
-    }
-  };
-
-  const restoreGiftcard = async (id: number) => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/giftcards/${id}/restore`,
-        {
-          method: "POST",
-          headers: authHeaders(),
-        }
-      );
-
-      if (!res.ok) {
-        alert("Failed to restore giftcard");
-        return;
-      }
-
-      loadGiftcards();
-    } catch (err) {
-      alert("Error restoring giftcard");
-    }
-  };
+    return g.code.toLowerCase().includes(search.toLowerCase());
+  });
 
   if (loading) {
     return <div className="p-6 text-black">Loading giftcards…</div>;
@@ -119,53 +82,45 @@ export default function GiftcardsPage() {
   return (
     <div className="min-h-screen bg-gray-200 p-6 flex justify-center">
       <div className="w-[90%] mx-auto space-y-6">
-        
+
         {/* HEADER */}
         <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
           Gift Cards
         </div>
 
-        {/* ERROR MESSAGE */}
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             {error}
           </div>
         )}
 
-        {/* SEARCH SECTION */}
-        <form
-          onSubmit={(e) => e.preventDefault()}
-          className="bg-gray-300 rounded-md p-4 space-y-3"
-        >
-          <div className="flex gap-3">
-            <input
-              type="text"
-              placeholder="Search by code..."
-              value={searchCode}
-              onChange={(e) => setSearchCode(e.target.value)}
-              className="flex-1 bg-gray-200 rounded-md px-3 py-2 text-black"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setSearchCode("");
-              }}
-              className="bg-gray-400 text-black px-4 py-2 rounded hover:bg-gray-500"
-            >
-              Clear
-            </button>
-          </div>
+        {/* CONTROLS (Services-style) */}
+        <div className="bg-gray-300 rounded-md p-6 space-y-4">
 
-          {/* Show inactive checkbox */}
-          <div className="flex items-center gap-3">
+          {/* Show inactive */}
+          <label className="flex items-center gap-2 text-black text-sm">
             <input
               type="checkbox"
               checked={includeInactive}
               onChange={(e) => setIncludeInactive(e.target.checked)}
             />
-            <span className="text-black">Show inactive</span>
+            Show inactive
+          </label>
+
+          {/* Search */}
+          <div className="flex justify-center">
+            <div className="flex items-center bg-gray-200 border border-gray-400 rounded-md w-full max-w-3xl px-4 py-3">
+              <input
+                type="text"
+                className="grow bg-transparent focus:outline-none text-black"
+                placeholder="Search by gift card code"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <span className="text-black text-lg">⌕</span>
+            </div>
           </div>
-        </form>
+        </div>
 
         {/* TABLE HEADERS */}
         <div className="grid grid-cols-6 px-4 text-sm font-medium text-black">
@@ -179,51 +134,54 @@ export default function GiftcardsPage() {
 
         {/* GIFTCARDS LIST */}
         <div className="space-y-3">
-          {giftcards.length === 0 ? (
+          {filteredGiftcards.length === 0 && (
             <div className="bg-gray-300 rounded-md px-4 py-3 text-black text-center">
               No giftcards found
             </div>
-          ) : (
-            giftcards.map((giftcard) => (
-              <div
-                key={giftcard.id}
-                className={`grid grid-cols-6 bg-gray-300 text-black rounded-md px-4 py-3 items-center ${
-                  !giftcard.isActive ? "opacity-50" : ""
-                }`}
-              >
-                <span className="font-mono font-bold cursor-pointer hover:text-blue-600" onClick={() => navigate(`/giftcards/view/${giftcard.id}`)}>{giftcard.code}</span>
-                <span>€ {giftcard.initialBalance.toFixed(2)}</span>
-                <span>€ {giftcard.balance.toFixed(2)}</span>
-                <span>
-                  {new Date(giftcard.issuedAt).toLocaleDateString()}
-                </span>
-                <span>
-                  {giftcard.expiresAt
-                    ? new Date(giftcard.expiresAt).toLocaleDateString()
-                    : "-"}
-                </span>
-
-                {/* ACTION BUTTONS */}
-                <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={() => navigate(`/giftcards/view/${giftcard.id}`)}
-                    className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
-                  >
-                    View
-                  </button>
-                </div>
-              </div>
-            ))
           )}
+
+          {filteredGiftcards.map((giftcard) => (
+            <div
+              key={giftcard.id}
+              className={`grid grid-cols-6 bg-gray-300 text-black rounded-md px-4 py-3 items-center ${
+                !giftcard.isActive ? "opacity-50" : ""
+              }`}
+            >
+              <span
+                className="font-mono font-bold cursor-pointer hover:text-blue-600"
+                onClick={() => navigate(`/giftcards/view/${giftcard.id}`)}
+              >
+                {giftcard.code}
+              </span>
+
+              <span>€ {giftcard.initialBalance.toFixed(2)}</span>
+              <span>€ {giftcard.balance.toFixed(2)}</span>
+              <span>{new Date(giftcard.issuedAt).toLocaleDateString()}</span>
+              <span>
+                {giftcard.expiresAt
+                  ? new Date(giftcard.expiresAt).toLocaleDateString()
+                  : "-"}
+              </span>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => navigate(`/giftcards/view/${giftcard.id}`)}
+                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                >
+                  View
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* CREATE BUTTON */}
+        {/* CREATE */}
         <div className="pt-6">
           <button
             onClick={() => navigate("/giftcards/create")}
             className="w-48 bg-gray-400 hover:bg-gray-500 rounded-md py-2 text-black"
           >
-            Issue New
+            Create
           </button>
         </div>
       </div>
