@@ -424,7 +424,7 @@ export default function CreateReservationPage() {
               placeholder="Notes"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="w-full bg-gray-400 p-2 rounded min-h-[80px]"
+              className="w-full bg-gray-400 p-2 rounded min-h-20"
             />
           </div>
         </div>
