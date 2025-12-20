@@ -111,12 +111,12 @@ export default function ServicesPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <span className="text-black text-lg">🔍</span>
+              <span className="text-black text-lg">⌕</span>
             </div>
           </div>
         </div>
 
-        {/* TABLE HEADERS */}
+        {/* TABLE HEADER */}
         <div className="grid grid-cols-4 px-4 text-sm font-medium text-black">
           <span>Name</span>
           <span>Duration</span>

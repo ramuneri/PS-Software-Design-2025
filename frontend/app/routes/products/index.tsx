@@ -115,7 +115,7 @@ export default function ProductsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <span className="text-black text-lg">🔍</span>
+              <span className="text-black text-lg">⌕</span>
             </div>
           </div>
         </div>

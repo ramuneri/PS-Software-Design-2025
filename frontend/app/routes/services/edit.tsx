@@ -10,13 +10,11 @@ export default function ServiceEdit() {
   const [taxCategories, setTaxCategories] = useState<{ id: number; name: string }[]>([]);
   const [form, setForm] = useState<any>(null);
 
-  // Load service + tax categories
   useEffect(() => {
     async function load() {
       try {
         setLoading(true);
 
-        // Load service data
         const res = await apiFetch(
           `${import.meta.env.VITE_API_URL}/api/services/${id}`
         );
@@ -30,7 +28,6 @@ export default function ServiceEdit() {
 
         setForm(json.data);
 
-        // Load tax categories
         const taxRes = await apiFetch(
           `${import.meta.env.VITE_API_URL}/tax/categories`
         );
