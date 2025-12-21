@@ -58,8 +58,6 @@ namespace backend.Data
 
         private async Task EnsureCompatibilityColumnsAsync()
         {
-            // Some teammates may have an older database schema locally. These idempotent ALTERs
-            // prevent runtime errors when new columns are introduced (e.g. "IsActive" on Customers).
             try
             {
                 await _db.Database.ExecuteSqlRawAsync(
@@ -82,7 +80,6 @@ namespace backend.Data
                 _logger.LogWarning(ex, "Failed to ensure Reservations.Note column");
             }
 
-            // Refunds schema drift: older DBs may still have PaymentId and not have IsPartial.
             try
             {
                 await _db.Database.ExecuteSqlRawAsync(

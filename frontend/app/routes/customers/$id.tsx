@@ -82,7 +82,6 @@ export default function CustomerDetailPage() {
       const loadedCustomer = (custJson as any).data ?? (custJson as Customer);
       setCustomer(loadedCustomer);
 
-      // fetch reservations (services only)
       const resRes = await fetch(
         `${import.meta.env.VITE_API_URL}/api/reservations?includeInactive=true`,
         { headers: authHeaders() }
@@ -110,7 +109,6 @@ export default function CustomerDetailPage() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleDelete = async () => {

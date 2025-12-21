@@ -2,45 +2,81 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../api";
 
+type Service = {
+  serviceId: number;
+  name: string;
+  durationMinutes: number;
+  defaultPrice: number;
+  isActive: boolean;
+};
+
 export default function ServicesPage() {
   const navigate = useNavigate();
 
-  const [services, setServices] = useState<any[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [showInactive, setShowInactive] = useState(false);
+  const [includeInactive, setIncludeInactive] = useState(false);
 
+  const loadServices = async () => {
+    try {
+      setLoading(true);
+
+      const activeRes = await apiFetch(
+        `${import.meta.env.VITE_API_URL}/api/services?active=true`
+      );
+      const activeJson = await activeRes.json();
+
+      const inactiveRes = await apiFetch(
+        `${import.meta.env.VITE_API_URL}/api/services?active=false`
+      );
+      const inactiveJson = await inactiveRes.json();
+
+      const active = Array.isArray(activeJson.data)
+        ? activeJson.data
+        : [];
+
+      const inactive = Array.isArray(inactiveJson.data)
+        ? inactiveJson.data
+        : [];
+
+      setServices([...active, ...inactive]);
+    } catch {
+      console.error("Failed to load services");
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
+    loadServices();
+  }, []);
 
-      const res = await apiFetch(
-        `${import.meta.env.VITE_API_URL}/api/services?active=${!showInactive}`
-      );
-      const json = await res.json();
+  const deleteService = async (id: number) => {
+    await apiFetch(
+      `${import.meta.env.VITE_API_URL}/api/services/${id}`,
+      { method: "DELETE" }
+    );
+    loadServices();
+  };
 
+  const restoreService = async (id: number) => {
+    await apiFetch(
+      `${import.meta.env.VITE_API_URL}/api/services/${id}/restore`,
+      { method: "POST" }
+    );
+    loadServices();
+  };
 
-      setServices(Array.isArray(json.data) ? json.data : []);
+  const filteredServices = services.filter((s) => {
+    if (!includeInactive && !s.isActive) return false;
 
-      setLoading(false);
-    }
-
-    load();
-  }, [showInactive]);
-
-
-  const filtered = services.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase())
-  );
+    return s.name.toLowerCase().includes(search.toLowerCase());
+  });
 
   if (loading) {
-    return (
-      <div className="p-6 text-black">
-        Loading services…
-      </div>
-    );
+    return <div className="p-6 text-black">Loading services…</div>;
   }
 
   return (
@@ -52,41 +88,35 @@ export default function ServicesPage() {
           Service List
         </div>
 
-        {/* SEARCH AREA */}
-        <div className="bg-gray-300 rounded-md p-6 space-y-6">
-
-          {/* Show inactive toggle */}
+        {/* CONTROLS */}
+        <div className="bg-gray-300 rounded-md p-6 space-y-4">
+          
+          {/* Checkbox */}
           <label className="flex items-center gap-2 text-black text-sm">
             <input
               type="checkbox"
-              checked={showInactive}
-              onChange={(e) => setShowInactive(e.target.checked)}
+              checked={includeInactive}
+              onChange={(e) => setIncludeInactive(e.target.checked)}
             />
             Show inactive
           </label>
 
-          {/* Search input */}
+          {/* Search */}
           <div className="flex justify-center">
             <div className="flex items-center bg-gray-200 border border-gray-400 rounded-md w-full max-w-3xl px-4 py-3">
               <input
                 type="text"
                 className="grow bg-transparent focus:outline-none text-black"
-                placeholder="Search for specific item"
+                placeholder="Search for service"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <span className="text-black text-lg">🔍</span>
+              <span className="text-black text-lg">⌕</span>
             </div>
-          </div>
-
-          <div className="flex justify-center">
-            <button className="bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded text-black">
-              Search
-            </button>
           </div>
         </div>
 
-        {/* TABLE HEADERS */}
+        {/* TABLE HEADER */}
         <div className="grid grid-cols-4 px-4 text-sm font-medium text-black">
           <span>Name</span>
           <span>Duration</span>
@@ -94,70 +124,52 @@ export default function ServicesPage() {
           <span className="text-right pr-6">Actions</span>
         </div>
 
-        {/* TABLE ROWS */}
+        {/* SERVICES LIST */}
         <div className="space-y-3">
-          {filtered.map((service) => (
+          {filteredServices.map((service) => (
             <div
               key={service.serviceId}
-              className="grid grid-cols-4 bg-gray-300 text-black rounded-md px-4 py-3 items-center"
+              className={`grid grid-cols-4 bg-gray-300 text-black rounded-md px-4 py-3 items-center ${
+                !service.isActive ? "opacity-50" : ""
+              }`}
             >
               <span>{service.name}</span>
-
               <span>
                 {service.durationMinutes >= 60
                   ? `${service.durationMinutes / 60}hr`
                   : `${service.durationMinutes}min`}
               </span>
-
               <span>{service.defaultPrice}</span>
 
               {/* ACTION BUTTONS */}
-              <div className="flex justify-end gap-2 pr-2">
+              <div className="flex gap-2 justify-end">
                 <button
-                  onClick={() => {
-                    console.log("NAV:", `/services/${service.serviceId}/edit`);
-                    navigate(`/services/${service.serviceId}/edit`);
-                  }}
-                  className="bg-blue-400 hover:bg-blue-500 text-white px-3 py-1 rounded"
+                  onClick={() => navigate(`/services/${service.serviceId}/edit`)}
+                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
                 >
                   Edit
                 </button>
 
                 {service.isActive ? (
                   <button
-                    onClick={async () => {
-                      await apiFetch(`${import.meta.env.VITE_API_URL}/api/services/${service.serviceId}`, {
-                        method: "DELETE",
-                      });
-                      location.reload();
-                    }}
-                    className="bg-red-400 hover:bg-red-500 text-white px-3 py-1 rounded"
+                    onClick={() => deleteService(service.serviceId)}
+                    className="px-3 py-1 bg-red-400 hover:bg-red-500 text-black rounded"
                   >
                     Delete
                   </button>
                 ) : (
                   <button
-                    onClick={async () => {
-                      await apiFetch(
-                        `${import.meta.env.VITE_API_URL}/api/services/${service.serviceId}/restore`,
-                        { method: "POST" }
-                      );
-                      location.reload();
-                    }}
-                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+                    onClick={() => restoreService(service.serviceId)}
+                    className="px-3 py-1 bg-green-400 hover:bg-green-500 text-black rounded"
                   >
                     Restore
                   </button>
                 )}
               </div>
-
-
-
             </div>
           ))}
         </div>
 
-        {/* CREATE BUTTON */}
         <div className="pt-6">
           <button
             onClick={() => navigate("/services/create")}
@@ -166,7 +178,6 @@ export default function ServicesPage() {
             Create
           </button>
         </div>
-
       </div>
     </div>
   );

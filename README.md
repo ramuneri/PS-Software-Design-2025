@@ -1,6 +1,6 @@
 # Team DAB
 
-Members:
+## Members:
 
 - Emilija Marija Dailydžionytė
 - Ramunė Riaubaitė
@@ -10,7 +10,7 @@ Members:
 
 ---
 
-## Order Management System (Documented by Žalia Žolė Žydi)
+## Order Management System (Documented by Žalia Žolė Žydi Developed by DAB)
 
 ### Overview
 A modular order and reservation management system for small and medium businesses in catering and beauty sectors.  
@@ -76,10 +76,7 @@ The app runs at http://localhost:5173
 
 https://docs.google.com/document/d/1y9MGumKtNmUBonl7jRDzTfgCaIwaRQizRJxI4M2puZw/edit?fbclid=IwY2xjawM6CglleHRuA2FlbQIxMQABHm7GT6E2WpwJK9TmhrJtM-GpMJ5Ib2WMxMV8tvwdCdgs41wPtmGI0c6GmOtl_aem__EfP_R1GMkN0LWCE6USxIA&tab=t.0
 
-### Overleaf of our documentation (NOT related to this project)
 
-https://www.overleaf.com/project/68d6792d73e469230f8e2909
-.
-
-### Here is a link to a Google Drive file that documents main changes we made during the development of this project, including the main updates reflected in the documentation.
+### Changes we made during the development
+Here is a link to a Google Drive file that documents main changes we made during the development of this project, including the evaluation of the documentation we received.
 https://docs.google.com/document/d/1dC7oYD014BluLbxDHf-FF2NaTevsqTgHll7BtvEuFE0/edit?usp=sharing

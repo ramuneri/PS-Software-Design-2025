@@ -118,9 +118,9 @@ export default function OrdersListPage() {
                     )}
 
                     {/* Table Container */}
-                    <div className="bg-gray-300 rounded-md flex-1 flex flex-col overflow-hidden">
+                    <div className="bg-gray-300 rounded-md flex-1 flex flex-col overflow-hidden text-black">
                         {/* Table Header */}
-                        <div className="grid grid-cols-12 gap-4 px-6 py-4 text-gray-600 font-medium border-b border-gray-400">
+                        <div className="grid grid-cols-12 gap-4 px-6 py-4  text-black font-medium border-b border-gray-400 ">
                             <span className="col-span-2">OrderID</span>
                             <span className="col-span-3">Customer</span>
                             <span className="col-span-3">Opened at</span>

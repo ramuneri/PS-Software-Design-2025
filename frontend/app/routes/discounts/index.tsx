@@ -48,6 +48,7 @@ export default function DiscountsPage() {
     }
   };
 
+  
   useEffect(() => {
     loadDiscounts();
   }, [includeInactive]);
@@ -81,7 +82,7 @@ export default function DiscountsPage() {
           Discount List
         </div>
 
-        {/* Show inactive checkbox */}
+        {/* Checkbox */}
         <div className="flex items-center gap-3">
           <input
             type="checkbox"
@@ -145,15 +146,15 @@ export default function DiscountsPage() {
 
                 {discount.isActive ? (
                   <button
-                    className="px-3 py-1 bg-red-400 hover:bg-red-500 text-black rounded"
                     onClick={() => deleteDiscount(discount.id)}
+                    className="px-3 py-1 bg-red-400 hover:bg-red-500 text-black rounded"
                   >
                     Delete
                   </button>
                 ) : (
                   <button
-                    className="px-3 py-1 bg-green-400 hover:bg-green-500 text-black rounded"
                     onClick={() => restoreDiscount(discount.id)}
+                    className="px-3 py-1 bg-green-400 hover:bg-green-500 text-black rounded"
                   >
                     Restore
                   </button>
@@ -163,7 +164,6 @@ export default function DiscountsPage() {
           ))}
         </div>
 
-        {/* CREATE BUTTON */}
         <div className="pt-6">
           <button
             onClick={() => navigate("/discounts/create")}

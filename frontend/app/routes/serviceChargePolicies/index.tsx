@@ -25,7 +25,7 @@ export default function ServiceChargePoliciesPage() {
   const [loading, setLoading] = useState(true);
   const [includeInactive, setIncludeInactive] = useState(false);
 
-  const merchantId = 1; // temporary (later from auth)
+  const merchantId = 1; // TEMP.
 
   const loadPolicies = async () => {
     try {
@@ -47,6 +47,7 @@ export default function ServiceChargePoliciesPage() {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     loadPolicies();
@@ -84,10 +85,10 @@ export default function ServiceChargePoliciesPage() {
 
         {/* HEADER */}
         <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
-          Service Charge Policies
+          Service Charge Policies List
         </div>
 
-        {/* SHOW INACTIVE */}
+        {/* Checkbox */}
         <div className="flex items-center gap-3">
           <input
             type="checkbox"
@@ -107,7 +108,7 @@ export default function ServiceChargePoliciesPage() {
           <span className="text-right">Actions</span>
         </div>
 
-        {/* LIST */}
+        {/* POLICIES LIST */}
         <div className="space-y-3">
           {policies.map((p) => (
             <div
@@ -122,11 +123,10 @@ export default function ServiceChargePoliciesPage() {
               <span>{p.serviceIds.length}</span>
               <span>{p.orderIds.length}</span>
 
+              {/* ACTION BUTTONS */}
               <div className="flex gap-2 justify-end">
                 <button
-                  onClick={() =>
-                    navigate(`/service-charge-policies/${p.id}/edit`)
-                  }
+                  onClick={() => navigate(`/service-charge-policies/${p.id}/edit`)}
                   className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
                 >
                   Edit
@@ -152,7 +152,6 @@ export default function ServiceChargePoliciesPage() {
           ))}
         </div>
 
-        {/* CREATE */}
         <div className="pt-6">
           <button
             onClick={() => navigate("/service-charge-policies/create")}

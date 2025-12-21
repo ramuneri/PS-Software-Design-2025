@@ -134,32 +134,35 @@ const handleSave = async () => {
 
   return (
     <div className="min-h-screen text-black bg-gray-200 p-6 flex justify-center">
-      <div className="w-full max-w-2xl space-y-6">
+      <div className="w-full max-w-3xl space-y-6">
 
-        <div className="bg-gray-300 py-3 text-center font-medium">
+        {/* HEADER */}
+        <div className="bg-gray-300 rounded-md py-3 px-4 text-center text-black font-medium">
           Edit Reservation
         </div>
 
         {error && <div className="text-red-600">{error}</div>}
 
-        <div className="bg-gray-300 p-6 space-y-4">
+        <div className="bg-gray-300 rounded-md p-4 space-y-2">
 
-          <div className="space-y-1">
-            <div className="text-sm text-gray-800 font-medium">Service</div>
-            <div className="bg-gray-200 rounded px-3 py-2">{reservation.serviceName}</div>
+          <div className="space-y-1 ">
+            <div className="block mb-1 text-sm">Service</div>
+            <div className="bg-gray-200 p-2 rounded w-full">{reservation.serviceName}</div>
           </div>
           <div className="space-y-1">
-            <div className="text-sm text-gray-800 font-medium">Customer</div>
-            <div className="bg-gray-200 rounded px-3 py-2">{reservation.customerName}</div>
+            <div className="block mb-1 text-sm">Customer</div>
+            <div className="bg-gray-200 p-2 rounded w-full">{reservation.customerName}</div>
           </div>
+        </div>
 
+        <div className="bg-gray-300 rounded-md p-4 space-y-2">
           <div className="space-y-1">
-            <div className="text-sm text-gray-800 font-medium">Employee</div>
+            <div className="block mb-1 text-sm">Employee</div>
             <select
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
               disabled={status === "Completed"}
-              className="w-full bg-gray-400 p-2 rounded"
+              className="bg-gray-200 p-2 rounded w-full"
             >
               <option value="">Employee</option>
               {employees.map((e) => (
@@ -172,21 +175,21 @@ const handleSave = async () => {
 
 
           <div className="space-y-1">
-            <div className="text-sm text-gray-800 font-medium">Start time</div>
+            <div className="block mb-1 text-sm">Start time</div>
             <input
                 type="datetime-local"
                 value={startTime}
                 disabled={status === "Completed"}
                 min={toDateTimeLocalValue(new Date())}
                 onChange={(e) => setStartTime(e.target.value)}
-                className={`w-full bg-gray-400 p-2 rounded ${
+                className={`bg-gray-200 p-2 rounded w-full ${
                     status === "Completed" ? "cursor-not-allowed opacity-60" : ""
                 }`}
             />
           </div>
 
           <div className="space-y-1">
-            <div className="text-sm text-gray-800 font-medium">Duration (minutes)</div>
+            <div className="block mb-1 text-sm">Duration (minutes)</div>
             <input
               type="number"
               min={15}
@@ -194,7 +197,7 @@ const handleSave = async () => {
               value={durationMinutes}
               disabled={status === "Completed"}
               onChange={(e) => setDurationMinutes(Number(e.target.value))}
-              className={`w-full bg-gray-400 p-2 rounded ${
+              className={`bg-gray-200 p-2 rounded w-full ${
                   status === "Completed" ? "cursor-not-allowed opacity-60" : ""
               }`}
               placeholder="Duration (minutes)"
@@ -207,40 +210,46 @@ const handleSave = async () => {
           </div>
 
           <div className="space-y-1">
-            <div className="text-sm text-gray-800 font-medium">Notes</div>
+            <div className="block mb-1 text-sm">Notes</div>
             <textarea
               placeholder="Notes"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               disabled={status === "Completed"}
-              className={`w-full bg-gray-400 p-2 rounded min-h-[80px] ${
+              className={`bg-gray-200 p-2 rounded w-full ${
                   status === "Completed" ? "cursor-not-allowed opacity-60" : ""
               }`}
             />
           </div>
+          
+          <div>
+            <label className="block mb-1 text-sm">Status</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="bg-gray-200 p-2 rounded w-full"
+            >
+              <option value="Booked">Booked</option>
+              <option value="Cancelled">Cancelled</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+          
+          <div className="flex gap-4 mt-6">
+            <button
+              onClick={handleSave}
+              className="bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded-md text-black"
+            >
+              Save
+            </button>
 
-
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="w-full bg-gray-400 p-2 rounded"
-          >
-            <option value="Booked">Booked</option>
-            <option value="Cancelled">Cancelled</option>
-            <option value="Completed">Completed</option>
-          </select>
-        </div>
-
-        <div className="flex gap-4">
-          <button onClick={handleSave} className="flex-1 bg-gray-300 py-2 rounded">
-            Save
-          </button>
-          <button
-            onClick={() => navigate("/reservations")}
-            className="flex-1 bg-gray-300 py-2 rounded"
-          >
-            Cancel
-          </button>
+            <button
+              onClick={() => navigate("/reservations")}
+              className="bg-gray-400 hover:bg-gray-500 px-6 py-2 rounded-md text-black"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     </div>

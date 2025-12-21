@@ -26,7 +26,6 @@ export default function ServiceCreate() {
         if (Array.isArray(json.data)) {
           setTaxCategories(json.data);
         } else if (json.data?.data) {
-          // in case backend wraps twice
           setTaxCategories(json.data.data);
         }
       } catch (error) {
