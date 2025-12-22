@@ -1,5 +1,4 @@
 import { Navigate, Outlet, useLocation, useOutletContext } from "react-router";
-import Login from "~/routes/login";
 
 type UserOutletContext = {
   setUser: React.Dispatch<
@@ -27,9 +26,6 @@ export default function Auth() {
     return <Outlet context={outletContext} />;
   }
 
-  if (location.pathname !== "/") {
-    return <Navigate to={"/"} replace />;
-  }
-
-  return <Login />;
+  // Not authenticated: send all other routes to login (keeps outlet context for setUser)
+  return <Navigate to={"/login"} replace />;
 }
