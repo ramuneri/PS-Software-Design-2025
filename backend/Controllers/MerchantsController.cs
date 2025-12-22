@@ -113,4 +113,12 @@ public class MerchantsController(IMerchantService service) : ControllerBase
         var ok = await service.DeactivateSubscriptionAsync(merchantId, subscriptionId, IsSuperAdmin, CurrentMerchantId);
         return ok ? NoContent() : NotFound();
     }
+
+    [HttpGet("{merchantId:int}/features/{featureName}")]
+    [Authorize]
+    public async Task<IActionResult> CheckFeature(int merchantId, string featureName)
+    {
+        var allowed = await service.MerchantHasFeatureAsync(merchantId, featureName);
+        return Ok(new { data = new { feature = featureName, enabled = allowed } });
+    }
 }

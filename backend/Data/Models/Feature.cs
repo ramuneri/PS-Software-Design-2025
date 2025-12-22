@@ -2,13 +2,14 @@ using System.ComponentModel.DataAnnotations;
 
 namespace backend.Data.Models;
 
-public class Feature
-{
-    [Key]
-    public int Id { get; set; }
+    public class Feature
+    {
+        [Key]
+        public int Id { get; set; }
 
-    public string? Name { get; set; }
-    public string? Description { get; set; }
+        public string? Name { get; set; }
+        public string? Description { get; set; }
+        public bool IsActive { get; set; } = true;
 
-    public ICollection<PlanFeature> PlanFeatures { get; set; } = new List<PlanFeature>();
-}
+        public ICollection<PlanFeature> PlanFeatures { get; set; } = new List<PlanFeature>();
+    }

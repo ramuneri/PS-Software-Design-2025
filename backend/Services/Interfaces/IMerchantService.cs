@@ -14,4 +14,5 @@ public interface IMerchantService
     Task<IEnumerable<MerchantSubscriptionDto>> GetSubscriptionsAsync(int merchantId, bool isSuperAdmin, int? currentMerchantId);
     Task<MerchantSubscriptionDto?> CreateSubscriptionAsync(int merchantId, MerchantSubscriptionCreateDto dto, bool isSuperAdmin, int? currentMerchantId);
     Task<bool> DeactivateSubscriptionAsync(int merchantId, int subscriptionId, bool isSuperAdmin, int? currentMerchantId);
+    Task<bool> MerchantHasFeatureAsync(int merchantId, string featureName);
 }

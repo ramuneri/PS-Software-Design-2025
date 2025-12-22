@@ -127,6 +127,17 @@ namespace backend.Data
             {
                 _logger.LogWarning(ex, "Failed to ensure Merchant compatibility columns");
             }
+
+            try
+            {
+                await _db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"identity\".\"Features\" ADD COLUMN IF NOT EXISTS \"IsActive\" boolean NOT NULL DEFAULT true;"
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to ensure Features.IsActive column");
+            }
         }
 
 

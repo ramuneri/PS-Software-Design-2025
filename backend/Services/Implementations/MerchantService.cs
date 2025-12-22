@@ -8,6 +8,31 @@ namespace backend.Services.Implementations;
 
 public class MerchantService(ApplicationDbContext db) : IMerchantService
 {
+    public async Task<bool> MerchantHasFeatureAsync(int merchantId, string featureName)
+    {
+        var name = featureName.Trim().ToLowerInvariant();
+        var now = DateTime.UtcNow;
+
+        var sub = await db.MerchantSubscriptions
+            .Include(ms => ms.Plan)
+            .ThenInclude(p => p.PlanFeatures)
+            .ThenInclude(pf => pf.Feature)
+            .Where(ms => ms.MerchantId == merchantId
+                         && ms.IsActive
+                         && ms.StartsAt <= now
+                         && (ms.EndsAt == null || ms.EndsAt > now))
+            .OrderByDescending(ms => ms.StartsAt)
+            .FirstOrDefaultAsync();
+
+        if (sub?.Plan == null) return false;
+
+        return sub.Plan.PlanFeatures.Any(pf =>
+            pf.Feature != null &&
+            pf.Feature.IsActive &&
+            !string.IsNullOrWhiteSpace(pf.Feature.Name) &&
+            pf.Feature.Name.Trim().ToLowerInvariant() == name);
+    }
+
     public async Task<IEnumerable<MerchantDto>> GetAllAsync(bool includeInactive, bool isSuperAdmin, int? currentMerchantId)
     {
         IQueryable<Merchant> query = db.Merchants;
@@ -167,6 +192,7 @@ public class MerchantService(ApplicationDbContext db) : IMerchantService
             MerchantId = merchantId,
             PlanId = dto.PlanId,
             StartsAt = dto.StartsAt,
+            EndsAt = dto.EndsAt,
             IsActive = true,
             Status = "Active"
         };
