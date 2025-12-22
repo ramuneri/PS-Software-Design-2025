@@ -39,8 +39,11 @@ public class PaymentValidationService : IPaymentValidationService
         PaymentRequest payment,
         decimal remainingBalance)
     {
-        // Cash must cover at least the remaining balance
-        if (payment.Amount < remainingBalance)
+        // Cash must cover at least the remaining balance.
+        // Allow a small tolerance (2 cents) to account for rounding differences between
+        // client-side calculations and backend totals.
+        var diff = payment.Amount - remainingBalance;
+        if (diff < -0.02m)
             return (false, $"Insufficient cash. Required: {remainingBalance:F2}, Provided: {payment.Amount:F2}");
 
         return (true, null);

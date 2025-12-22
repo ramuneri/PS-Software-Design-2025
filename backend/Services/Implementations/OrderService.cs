@@ -513,9 +513,11 @@ public class OrderService : IOrderService
             if (totals.Remaining <= 0)
                 return (null, null, null, null, "Order is already fully paid");
 
-            // 4. Validate total payment amount
+            // 4. Validate total payment amount (allow small rounding differences)
             var totalPaymentAmount = paymentRequests.Sum(p => p.Amount);
-            if (totalPaymentAmount < totals.Remaining)
+            var paymentDiff = totalPaymentAmount - totals.Remaining;
+            // If total paid is more than a tiny amount below remaining (e.g. > 2 cents), reject as insufficient
+            if (paymentDiff < -0.02m)
             {
                 return (null, null, null, null,
                     $"Insufficient payment. Required: {totals.Remaining:F2}, Provided: {totalPaymentAmount:F2}");

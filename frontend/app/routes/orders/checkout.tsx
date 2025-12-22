@@ -428,10 +428,14 @@ export default function OrderCheckoutPage() {
 
     // Calculate amount due: (subtotal - discount) + tax + service charge + tip - paid
     // This matches backend calculation: subtotalAfterDiscount + Tax + ServiceCharge + Tip
+    // and is rounded to 2 decimals to avoid floating-point precision issues.
     const amountDue = useMemo(() => {
         const subtotalAfterDiscount = Math.max(0, subtotal - discountAmount);
-        const totalWithAdjustments = subtotalAfterDiscount + tax + serviceChargeAmount + calculatedTip;
-        return Math.max(0, totalWithAdjustments - paid);
+        const totalWithAdjustments =
+            subtotalAfterDiscount + tax + serviceChargeAmount + calculatedTip;
+        const rawDue = Math.max(0, totalWithAdjustments - paid);
+        // Normalize to 2 decimal places so comparisons with user-entered cash work as expected
+        return Number(rawDue.toFixed(2));
     }, [subtotal, discountAmount, tax, serviceChargeAmount, calculatedTip, paid]);
 
     const payerTotals = useMemo(() => {
