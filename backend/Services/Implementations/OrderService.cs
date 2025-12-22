@@ -74,7 +74,8 @@ public class OrderService : IOrderService
         if (order.CancelledAt != null) return (null, null, null, null, "Cannot close a cancelled order");
 
         // Calculate overall totals for validation
-        var totals = await orderCalculator.CalculateOrderTotalsAsync(order, discountAmount, serviceChargeAmount);
+        var tipAmount = tipRequest?.Amount;
+        var totals = await orderCalculator.CalculateOrderTotalsAsync(order, discountAmount, serviceChargeAmount, tipAmount);
         if (totals.Remaining <= 0) return (null, null, null, null, "Order is already fully paid");
 
         // Build lookup for items
@@ -103,7 +104,7 @@ public class OrderService : IOrderService
             decimal price = oi.ProductVariationId != null && oi.ProductVariation != null
                 ? oi.ProductVariation.PriceAdjustment
                 : oi.Product?.Price ?? oi.Service?.DefaultPrice ?? 0;
-    
+
             var itemTotal = price * oi.Quantity;
             decimal taxRate = 0;
             if (oi.Product?.TaxCategoryId is int pcid)
@@ -191,7 +192,10 @@ public class OrderService : IOrderService
         foreach (var order in orders)
         {
             var (orderItemDtos, subTotal, taxTotal) = await CalculateTotals(order);
-            var calcTotals = await orderCalculator.CalculateOrderTotalsAsync(order);
+            // Use saved discount and service charge from order
+            var savedDiscountAmount = order.DiscountAmount;
+            var savedServiceChargeAmount = order.ServiceChargeAmount;
+            var calcTotals = await orderCalculator.CalculateOrderTotalsAsync(order, savedDiscountAmount, savedServiceChargeAmount);
             if (calcTotals.TaxBreakdown.Any())
             {
                 var categories = await _taxService.GetCategoriesAsync(includeInactive: true);
@@ -225,13 +229,16 @@ public class OrderService : IOrderService
                 )).ToList(),
                 subTotal,
                 taxTotal,
-                subTotal + taxTotal,
+                calcTotals.Total, // Use calculated total which includes discount, service charge, and tip
                 order.Note,
                 status,
                 order.OpenedAt,
                 order.ClosedAt,
                 order.CancelledAt,
-                calcTotals.TaxBreakdown
+                calcTotals.TaxBreakdown,
+                savedDiscountAmount ?? 0,
+                savedServiceChargeAmount ?? 0,
+                calcTotals.Tip
             ));
         }
 
@@ -257,7 +264,10 @@ public class OrderService : IOrderService
         }
 
         var (orderItemDtos, subTotal, taxTotal) = await CalculateTotals(order);
-        var calcTotals = await orderCalculator.CalculateOrderTotalsAsync(order);
+        // Use saved discount and service charge from order, matching how they were applied when closing
+        var savedDiscountAmount = order.DiscountAmount;
+        var savedServiceChargeAmount = order.ServiceChargeAmount;
+        var calcTotals = await orderCalculator.CalculateOrderTotalsAsync(order, savedDiscountAmount, savedServiceChargeAmount);
         if (calcTotals.TaxBreakdown.Any())
         {
             var categories = await _taxService.GetCategoriesAsync(includeInactive: true);
@@ -291,13 +301,16 @@ public class OrderService : IOrderService
             )).ToList(),
             subTotal,
             taxTotal,
-            subTotal + taxTotal,
+            calcTotals.Total, // Use calculated total which includes discount, service charge, and tip
             order.Note,
             status,
             order.OpenedAt,
             order.ClosedAt,
             order.CancelledAt,
-            calcTotals.TaxBreakdown
+            calcTotals.TaxBreakdown,
+            savedDiscountAmount ?? 0,
+            savedServiceChargeAmount ?? 0,
+            calcTotals.Tip
         );
     }
 
@@ -327,7 +340,7 @@ public class OrderService : IOrderService
 
         await context.OrderItems.AddRangeAsync(orderItemEntities);
         await context.SaveChangesAsync();
-        
+
         order = await context.Orders
             .Include(o => o.OrderItems)
             .ThenInclude(oi => oi.Product)
@@ -370,23 +383,23 @@ public class OrderService : IOrderService
         {
             return null;
         }
-    
+
         if (customerIdentifier != null)
         {
             order.CustomerIdentifier = customerIdentifier;
         }
-    
+
         if (note != null)
         {
             order.Note = note;
         }
-    
+
         if (items != null)
         {
             var itemsList = items.ToList();
-        
+
             context.OrderItems.RemoveRange(order.OrderItems);
-        
+
             var newOrderItems = itemsList.Select(item => new OrderItem
             {
                 OrderId = order.Id,
@@ -394,12 +407,12 @@ public class OrderService : IOrderService
                 Quantity = item.Quantity,
                 ProductVariationId = item.ProductVariationId
             }).ToList();
-    
+
             await context.OrderItems.AddRangeAsync(newOrderItems);
         }
 
         await context.SaveChangesAsync();
-    
+
         return await GetOrder(id);
     }
 
@@ -449,11 +462,11 @@ public class OrderService : IOrderService
         {
             return false;
         }
-        
+
         context.OrderItems.RemoveRange(order.OrderItems);
-        
+
         context.Orders.Remove(order);
-        
+
         await context.SaveChangesAsync();
 
         return true;
@@ -493,15 +506,18 @@ public class OrderService : IOrderService
             if (order.CancelledAt != null)
                 return (null, null, null, null, "Cannot close a cancelled order");
 
-            // 3. Calculate order totals (with discount and service charge from request)
-            var totals = await orderCalculator.CalculateOrderTotalsAsync(order, discountAmount, serviceChargeAmount);
+            // 3. Calculate order totals (with discount, service charge, and tip from request)
+            var tipAmount = tipRequest?.Amount;
+            var totals = await orderCalculator.CalculateOrderTotalsAsync(order, discountAmount, serviceChargeAmount, tipAmount);
 
             if (totals.Remaining <= 0)
                 return (null, null, null, null, "Order is already fully paid");
 
-            // 4. Validate total payment amount
+            // 4. Validate total payment amount (allow small rounding differences)
             var totalPaymentAmount = paymentRequests.Sum(p => p.Amount);
-            if (totalPaymentAmount < totals.Remaining)
+            var paymentDiff = totalPaymentAmount - totals.Remaining;
+            // If total paid is more than a tiny amount below remaining (e.g. > 2 cents), reject as insufficient
+            if (paymentDiff < -0.02m)
             {
                 return (null, null, null, null,
                     $"Insufficient payment. Required: {totals.Remaining:F2}, Provided: {totalPaymentAmount:F2}");
@@ -597,8 +613,8 @@ public class OrderService : IOrderService
                     }
 
                     var giftcard = await context.Giftcards
-                        .FirstOrDefaultAsync(g => g.Code == paymentReq.GiftCardCode && 
-                                                   g.IsActive && 
+                        .FirstOrDefaultAsync(g => g.Code == paymentReq.GiftCardCode &&
+                                                   g.IsActive &&
                                                    g.DeletedAt == null &&
                                                    (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow));
 
@@ -611,7 +627,7 @@ public class OrderService : IOrderService
                     if (giftcard.Balance < paymentAmount)
                     {
                         await transaction.RollbackAsync();
-                        return (null, null, null, null, 
+                        return (null, null, null, null,
                             $"Insufficient gift card balance. Available: {giftcard.Balance:F2}, Required: {paymentAmount:F2}");
                     }
 
@@ -645,7 +661,18 @@ public class OrderService : IOrderService
 
             context.GiftcardPayments.AddRange(giftcardPaymentRecords);
 
-            // 6. Record tip if provided
+            // 6. Save discount and service charge to order
+            if (discountAmount.HasValue && discountAmount.Value > 0)
+            {
+                order.DiscountAmount = discountAmount.Value;
+            }
+
+            if (serviceChargeAmount.HasValue && serviceChargeAmount.Value > 0)
+            {
+                order.ServiceChargeAmount = serviceChargeAmount.Value;
+            }
+
+            // 7. Record tip if provided
             if (tipRequest != null && tipRequest.Amount > 0)
             {
                 var orderTip = new OrderTip
@@ -658,14 +685,14 @@ public class OrderService : IOrderService
                 context.OrderTips.Add(orderTip);
             }
 
-            // 7. Close the order
+            // 8. Close the order
             order.ClosedAt = DateTime.UtcNow;
 
-            // 8. Save all changes
+            // 9. Save all changes
             await context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            // 9. Return result
+            // 10. Return result
             var orderDto = await GetOrder(orderId);
             return (orderDto, change, paymentIntentId, requires3DS, null);
         }
@@ -687,7 +714,7 @@ public class OrderService : IOrderService
             if (orderItem.ProductId != null && orderItem.Product != null)
             {
                 var product = orderItem.Product;
-                
+
                 decimal basePrice = orderItem.ProductVariationId != null && orderItem.ProductVariation != null
                     ? orderItem.ProductVariation.PriceAdjustment
                     : product.Price ?? 0;

@@ -29,6 +29,9 @@ type OrderDetail = {
     subTotal: number;
     tax: number;
     totalAmount: number;
+    discountAmount?: number;
+    serviceChargeAmount?: number;
+    tip?: number;
     note: string | null;
     status: number;
     closedAt: string | null;
@@ -89,6 +92,9 @@ export default function OrderReceiptPage() {
     };
 
     const currency = "EUR";
+    const discountAmount = order?.discountAmount ?? 0;
+    const serviceChargeAmount = order?.serviceChargeAmount ?? 0;
+    const tipAmount = order?.tip ?? 0;
 
     const getTotalRefunded = () => {
         return refunds.reduce((sum, refund) => sum + refund.amount, 0);
@@ -222,21 +228,33 @@ export default function OrderReceiptPage() {
                                     <span className="font-medium">{order.employeeId || "—"}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span>Discount</span>
-                                    <span className="font-medium">—</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Service charge</span>
-                                    <span className="font-medium">—</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Tip</span>
-                                    <span className="font-medium">—</span>
-                                </div>
-                                <div className="flex justify-between">
                                     <span>Subtotal</span>
                                     <span className="font-medium">{currency} {order.subTotal.toFixed(2)}</span>
                                 </div>
+                                {discountAmount > 0 && (
+                                    <div className="flex justify-between">
+                                        <span>Discount</span>
+                                        <span className="font-medium">
+                                            - {currency} {discountAmount.toFixed(2)}
+                                        </span>
+                                    </div>
+                                )}
+                                {serviceChargeAmount > 0 && (
+                                    <div className="flex justify-between">
+                                        <span>Service charge</span>
+                                        <span className="font-medium">
+                                            + {currency} {serviceChargeAmount.toFixed(2)}
+                                        </span>
+                                    </div>
+                                )}
+                                {tipAmount > 0 && (
+                                    <div className="flex justify-between">
+                                        <span>Tip</span>
+                                        <span className="font-medium">
+                                            + {currency} {tipAmount.toFixed(2)}
+                                        </span>
+                                    </div>
+                                )}
                                 {renderTax()}
                                 <div className="flex justify-between text-base font-semibold border-t border-gray-200 pt-2">
                                     <span>Total</span>
@@ -317,6 +335,24 @@ export default function OrderReceiptPage() {
                                     <span>Subtotal</span>
                                     <span>{currency} {order.subTotal.toFixed(2)}</span>
                                 </div>
+                                {discountAmount > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span>Discount</span>
+                                        <span>- {currency} {discountAmount.toFixed(2)}</span>
+                                    </div>
+                                )}
+                                {serviceChargeAmount > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span>Service charge</span>
+                                        <span>+ {currency} {serviceChargeAmount.toFixed(2)}</span>
+                                    </div>
+                                )}
+                                {tipAmount > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span>Tip</span>
+                                        <span>+ {currency} {tipAmount.toFixed(2)}</span>
+                                    </div>
+                                )}
                                 {renderTax()}
                                 <div className="border-t border-gray-200 pt-2 flex justify-between text-base font-semibold">
                                     <span>Total</span>
