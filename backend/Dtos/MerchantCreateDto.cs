@@ -1,16 +1,14 @@
 namespace backend.Dtos;
 
-public record MerchantDto(
-    int MerchantId,
-    string? OwnerId,
+public record MerchantCreateDto(
     string Name,
     string? BusinessType,
-    string Country,
+    string? Country,
     string? Address,
     string? City,
     string? Phone,
-    string Email,
+    string? Email,
     string? PaymentProvider,
     string? PaymentConfig,
-    bool IsActive
+    string? OwnerId
 );

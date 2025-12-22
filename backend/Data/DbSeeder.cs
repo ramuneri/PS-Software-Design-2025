@@ -110,6 +110,23 @@ namespace backend.Data
             {
                 _logger.LogWarning(ex, "Failed to remove legacy Refunds.PaymentId column");
             }
+
+            try
+            {
+                await _db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"identity\".\"Merchants\" ADD COLUMN IF NOT EXISTS \"IsActive\" boolean NOT NULL DEFAULT true;"
+                );
+                await _db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"identity\".\"Merchants\" ADD COLUMN IF NOT EXISTS \"PaymentProvider\" text;"
+                );
+                await _db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"identity\".\"Merchants\" ADD COLUMN IF NOT EXISTS \"PaymentConfig\" text;"
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to ensure Merchant compatibility columns");
+            }
         }
 
 

@@ -91,6 +91,7 @@ builder.Services.AddScoped<IGiftCardService, GiftCardService>();
 builder.Services.AddScoped<INotificationSmsService, NotificationSmsService>();
 builder.Services.AddScoped<IRefundService, RefundService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddScoped<IMerchantService, MerchantService>();
 
 builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddHttpContextAccessor();
