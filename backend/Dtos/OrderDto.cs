@@ -18,7 +18,10 @@ public record OrderDto(
     DateTime CreatedAt,
     DateTime? ClosedAt,
     DateTime? CancelledAt,
-    List<OrderTaxBreakdownDto>? TaxBreakdown
+    List<OrderTaxBreakdownDto>? TaxBreakdown,
+    decimal DiscountAmount = 0,
+    decimal ServiceChargeAmount = 0,
+    decimal Tip = 0
 )
 {
     // Alias for frontend expectations

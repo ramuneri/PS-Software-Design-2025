@@ -22,6 +22,9 @@ type OrderDetail = {
     cancelledAt: string | null;
     employeeId: string | null;
     totalAmount: number;
+    discountAmount?: number;
+    serviceChargeAmount?: number;
+    tip?: number;
     note: string | null;
     items: OrderItem[];
     status: number;
@@ -279,6 +282,24 @@ export default function OrderViewPage() {
                                                     <span>Subtotal</span>
                                                     <span>{order.subTotal?.toFixed(2) ?? ""}</span>
                                                 </div>
+                                                {order.discountAmount != null && order.discountAmount > 0 && (
+                                                    <div className="flex justify-between">
+                                                        <span>Discount</span>
+                                                        <span>- {order.discountAmount.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                {order.serviceChargeAmount != null && order.serviceChargeAmount > 0 && (
+                                                    <div className="flex justify-between">
+                                                        <span>Service charge</span>
+                                                        <span>+ {order.serviceChargeAmount.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                {order.tip != null && order.tip > 0 && (
+                                                    <div className="flex justify-between">
+                                                        <span>Tip</span>
+                                                        <span>+ {order.tip.toFixed(2)}</span>
+                                                    </div>
+                                                )}
                                                 {order.taxBreakdown.map((t) => (
                                                     <div key={`${t.taxCategoryId}-${t.ratePercent}`} className="flex justify-between">
                                                         <span>{`VAT ${t.ratePercent}% (${t.categoryName || "Tax"})`}</span>

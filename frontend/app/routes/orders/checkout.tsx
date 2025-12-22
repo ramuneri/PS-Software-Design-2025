@@ -388,13 +388,7 @@ export default function OrderCheckoutPage() {
         return Math.max(0, total - paid);
     }, [total, paid]);
 
-    const calculatedTip = useMemo(() => {
-        if (tipType === "percentage") {
-            return (remaining * tipPercentage) / 100;
-        }
-        return Number(tipCustom) || 0;
-    }, [tipType, tipPercentage, tipCustom, remaining]);
-
+    // Calculate discount as percentage of subtotal (matching backend: discount applied to subtotal)
     const discountAmount = useMemo(() => {
         if (selectedDiscounts.length === 0) return 0;
 
@@ -405,23 +399,40 @@ export default function OrderCheckoutPage() {
 
         if (totalPercent <= 0) return 0;
 
-        return (remaining * totalPercent) / 100;
-    }, [selectedDiscounts, remaining]);
+        // Discount is calculated on subtotal, not remaining
+        return (subtotal * totalPercent) / 100;
+    }, [selectedDiscounts, subtotal]);
 
+    // Calculate service charge as percentage of subtotal (matching backend)
     const serviceChargeAmount = useMemo(() => {
         const option = serviceChargeOptions.find(
             (opt) => opt.id === selectedServiceCharge
         );
         if (!option || option.percent <= 0) return 0;
 
-        return (remaining * option.percent) / 100;
-    }, [selectedServiceCharge, remaining]);
+        // Service charge is calculated on subtotal, not remaining
+        return (subtotal * option.percent) / 100;
+    }, [selectedServiceCharge, subtotal]);
 
+    // Calculate tip as percentage of total before tip, or custom amount
+    // Backend: tip is added to (subtotal - discount) + tax + service charge
+    const calculatedTip = useMemo(() => {
+        if (tipType === "percentage") {
+            // Calculate total before tip: (subtotal - discount) + tax + service charge
+            const subtotalAfterDiscount = Math.max(0, subtotal - discountAmount);
+            const totalBeforeTip = subtotalAfterDiscount + tax + serviceChargeAmount;
+            return (totalBeforeTip * tipPercentage) / 100;
+        }
+        return Number(tipCustom) || 0;
+    }, [tipType, tipPercentage, tipCustom, subtotal, discountAmount, tax, serviceChargeAmount]);
+
+    // Calculate amount due: (subtotal - discount) + tax + service charge + tip - paid
+    // This matches backend calculation: subtotalAfterDiscount + Tax + ServiceCharge + Tip
     const amountDue = useMemo(() => {
-        const baseAfterDiscounts = remaining - discountAmount;
-        const clampedBase = Math.max(0, baseAfterDiscounts);
-        return clampedBase + serviceChargeAmount + calculatedTip;
-    }, [remaining, discountAmount, serviceChargeAmount, calculatedTip]);
+        const subtotalAfterDiscount = Math.max(0, subtotal - discountAmount);
+        const totalWithAdjustments = subtotalAfterDiscount + tax + serviceChargeAmount + calculatedTip;
+        return Math.max(0, totalWithAdjustments - paid);
+    }, [subtotal, discountAmount, tax, serviceChargeAmount, calculatedTip, paid]);
 
     const payerTotals = useMemo(() => {
         const totals = payers.map(() => 0);
@@ -471,12 +482,11 @@ export default function OrderCheckoutPage() {
     }, [method, amountPaid, amountDue]);
 
     useEffect(() => {
-        if (method === "CASH") {
-            setAmountPaid(amountDue.toFixed(2));
-        } else if (method === "GIFT_CARD") {
+        // For all payment methods, set amountPaid to amountDue to ensure correct payment amount
+        if (method === "CASH" || method === "GIFT_CARD" || method === "CARD") {
             setAmountPaid(amountDue.toFixed(2));
         }
-    }, [amountDue, remaining, method]);
+    }, [amountDue, method]);
 
     useEffect(() => {
         if (allPayersCash) {
@@ -769,6 +779,14 @@ export default function OrderCheckoutPage() {
                                         <span className="font-medium">{order.employeeId || "—"}</span>
                                     </div>
                                     <div className="flex justify-between">
+                                        <span>Subtotal</span>
+                                        <span className="font-medium">{currency} {subtotal.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Tax</span>
+                                        <span className="font-medium">{currency} {order.tax.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
                                         <span>Discount</span>
                                         <span className="font-medium">{discountAmount > 0 ? `- ${currency} ${discountAmount.toFixed(2)}` : "—"}</span>
                                     </div>
@@ -780,13 +798,15 @@ export default function OrderCheckoutPage() {
                                         <span>Tip</span>
                                         <span className="font-medium">{calculatedTip > 0 ? `+ ${currency} ${calculatedTip.toFixed(2)}` : "—"}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span>Tax</span>
-                                        <span className="font-medium">{currency} {order.tax.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between font-semibold">
+                                    {paid > 0 && (
+                                        <div className="flex justify-between text-green-700">
+                                            <span>Paid</span>
+                                            <span className="font-medium">- {currency} {paid.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between font-semibold border-t border-gray-300 pt-2">
                                         <span>Total</span>
-                                        <span>{currency} {(order.totalAmount).toFixed(2)}</span>
+                                        <span>{currency} {(amountDue + paid).toFixed(2)}</span>
                                     </div>
                                 </div>
                                 <div className="space-y-2 text-sm text-gray-800 bg-gray-100 rounded-md p-3">

@@ -24,6 +24,9 @@ public class Order
 
     public string? Note { get; set; }
 
+    public decimal? DiscountAmount { get; set; }
+    public decimal? ServiceChargeAmount { get; set; }
+
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     public ICollection<Payment>? Payments { get; set; } = new List<Payment>();
     public ICollection<Refund>? Refunds { get; set; } = new List<Refund>();

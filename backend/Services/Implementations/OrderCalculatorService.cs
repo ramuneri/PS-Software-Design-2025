@@ -14,9 +14,9 @@ public class OrderCalculatorService : IOrderCalculatorService
     }
 
     public Task<OrderTotals> CalculateOrderTotalsAsync(Order order)
-        => CalculateOrderTotalsAsync(order, null, null);
+        => CalculateOrderTotalsAsync(order, null, null, null);
 
-    public async Task<OrderTotals> CalculateOrderTotalsAsync(Order order, decimal? discountAmount = null, decimal? serviceChargeAmount = null)
+    public async Task<OrderTotals> CalculateOrderTotalsAsync(Order order, decimal? discountAmount = null, decimal? serviceChargeAmount = null, decimal? tipAmount = null)
     {
         var totals = new OrderTotals();
 
@@ -73,10 +73,11 @@ public class OrderCalculatorService : IOrderCalculatorService
 
         totals.Discount = discountAmount ?? 0;
         totals.ServiceCharge = serviceChargeAmount ?? 0;
-        totals.Tip = order.OrderTips?.Sum(t => t.Amount) ?? 0;
+        // Use provided tipAmount if available, otherwise sum existing tips from order
+        totals.Tip = tipAmount ?? (order.OrderTips?.Sum(t => t.Amount) ?? 0);
 
         var subtotalAfterDiscount = Math.Max(0, subtotal - totals.Discount);
-        totals.Total = subtotalAfterDiscount + totals.Tax + totals.ServiceCharge;
+        totals.Total = subtotalAfterDiscount + totals.Tax + totals.ServiceCharge + totals.Tip;
 
         totals.Paid = order.Payments?
             .Where(p => p.PaymentStatus == "SUCCEEDED")
